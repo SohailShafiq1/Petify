@@ -7,8 +7,22 @@ import '../models/category_model.dart';
 import '../widgets/pet_card.dart';
 import '../widgets/category_card.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,11 +30,35 @@ class DashboardScreen extends StatelessWidget {
     final petsProvider = context.watch<PetsProvider>();
     final categories = CategoryModel.getDummyCategories();
 
+    // Filter pets based on search query
+    final filteredPets = _searchQuery.isEmpty
+        ? petsProvider.topSellingPets
+        : petsProvider.allPets.where((pet) {
+            return pet.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                pet.category.toLowerCase().contains(_searchQuery.toLowerCase());
+          }).toList();
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'PetiFy',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Row(
+          children: [
+            Icon(Icons.pets, color: Colors.white, size: 28),
+            const SizedBox(width: 8),
+            ShaderMask(
+              shaderCallback: (bounds) => const LinearGradient(
+                colors: [Colors.white, Color(0xFFE3F2FD)],
+              ).createShader(bounds),
+              child: const Text(
+                'PetiFy',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 28,
+                  letterSpacing: 1.2,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
         ),
         backgroundColor: Colors.blue.shade700,
         foregroundColor: Colors.white,
@@ -99,7 +137,7 @@ class DashboardScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header section with gradient
+              // Header section with gradient and search bar
               Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
@@ -130,6 +168,42 @@ class DashboardScreen extends StatelessWidget {
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: Colors.white.withOpacity(0.9),
                           ),
+                    ),
+                    const SizedBox(height: 20),
+                    // Search Bar
+                    TextField(
+                      controller: _searchController,
+                      onChanged: (value) {
+                        setState(() {
+                          _searchQuery = value;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Search pets by name or category...',
+                        hintStyle: TextStyle(color: Colors.grey.shade600),
+                        filled: true,
+                        fillColor: Colors.white,
+                        prefixIcon: Icon(Icons.search, color: Colors.blue.shade700),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  setState(() {
+                                    _searchController.clear();
+                                    _searchQuery = '';
+                                  });
+                                },
+                              )
+                            : null,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(30),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -183,7 +257,7 @@ class DashboardScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Featured Pets',
+                      _searchQuery.isEmpty ? 'Featured Pets' : 'Search Results',
                       style:
                           Theme.of(context).textTheme.titleLarge?.copyWith(
                                 fontWeight: FontWeight.bold,
@@ -192,20 +266,38 @@ class DashboardScreen extends StatelessWidget {
                     const SizedBox(height: 12),
                     petsProvider.isLoading
                         ? const Center(child: CircularProgressIndicator())
-                        : petsProvider.topSellingPets.isEmpty
-                            ? const Center(
+                        : filteredPets.isEmpty
+                            ? Center(
                                 child: Padding(
-                                  padding: EdgeInsets.all(32.0),
-                                  child: Text('No pets available'),
+                                  padding: const EdgeInsets.all(32.0),
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        Icons.search_off,
+                                        size: 64,
+                                        color: Colors.grey.shade400,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        _searchQuery.isEmpty
+                                            ? 'No pets available'
+                                            : 'No pets found',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               )
                             : ListView.builder(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
-                                itemCount: petsProvider.topSellingPets.length,
+                                itemCount: filteredPets.length,
                                 itemBuilder: (context, index) {
                                   return PetCard(
-                                    pet: petsProvider.topSellingPets[index],
+                                    pet: filteredPets[index],
                                   );
                                 },
                               ),
@@ -221,8 +313,8 @@ class DashboardScreen extends StatelessWidget {
           context.push('/add-pet');
         },
         backgroundColor: Colors.blue.shade700,
-        icon: const Icon(Icons.add),
-        label: const Text('Sell Your Pet'),
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text('Sell Your Pet', style: TextStyle(color: Colors.white)),
       ),
     );
   }
