@@ -37,6 +37,9 @@ class PetModel extends HiveObject {
   @HiveField(10)
   DateTime createdAt;
 
+  @HiveField(11)
+  bool isAvailable;
+
   PetModel({
     required this.id,
     required this.name,
@@ -49,6 +52,7 @@ class PetModel extends HiveObject {
     required this.ownerId,
     this.imagePath,
     DateTime? createdAt,
+    this.isAvailable = true,
   }) : createdAt = createdAt ?? DateTime.now();
 
   Map<String, dynamic> toJson() {
@@ -64,6 +68,7 @@ class PetModel extends HiveObject {
       'ownerId': ownerId,
       'imagePath': imagePath,
       'createdAt': createdAt.toIso8601String(),
+      'isAvailable': isAvailable,
     };
   }
 
@@ -80,6 +85,7 @@ class PetModel extends HiveObject {
       ownerId: json['ownerId'] as String,
       imagePath: json['imagePath'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
+      isAvailable: json['isAvailable'] as bool? ?? true,
     );
   }
 }

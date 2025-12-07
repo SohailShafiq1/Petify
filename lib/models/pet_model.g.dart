@@ -28,13 +28,14 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
       ownerId: fields[9] as String,
       imagePath: fields[8] as String?,
       createdAt: fields[10] as DateTime?,
+      isAvailable: fields[11] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, PetModel obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -56,7 +57,9 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
       ..writeByte(9)
       ..write(obj.ownerId)
       ..writeByte(10)
-      ..write(obj.createdAt);
+      ..write(obj.createdAt)
+      ..writeByte(11)
+      ..write(obj.isAvailable);
   }
 
   @override

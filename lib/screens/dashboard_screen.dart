@@ -64,9 +64,7 @@ class DashboardScreen extends StatelessWidget {
               title: const Text('My Pets'),
               onTap: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('My Pets - Coming Soon!')),
-                );
+                context.push('/my-pets');
               },
             ),
             ListTile(
@@ -74,9 +72,7 @@ class DashboardScreen extends StatelessWidget {
               title: const Text('Settings'),
               onTap: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Settings - Coming Soon!')),
-                );
+                context.push('/settings');
               },
             ),
             const Divider(),

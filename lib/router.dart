@@ -11,6 +11,10 @@ import 'screens/pet_details_screen.dart';
 import 'screens/categories_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/settings_screen.dart';
+import 'screens/orders_screen.dart';
+import 'screens/change_password_screen.dart';
+import 'screens/my_pets_screen.dart';
 
 class AppRouter {
   final AuthProvider authProvider;
@@ -86,6 +90,22 @@ class AppRouter {
       GoRoute(
         path: '/profile',
         builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/orders',
+        builder: (context, state) => const OrdersScreen(),
+      ),
+      GoRoute(
+        path: '/change-password',
+        builder: (context, state) => const ChangePasswordScreen(),
+      ),
+      GoRoute(
+        path: '/my-pets',
+        builder: (context, state) => const MyPetsScreen(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
