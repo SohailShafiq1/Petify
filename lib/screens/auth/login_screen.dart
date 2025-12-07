@@ -17,22 +17,14 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
 
   @override
-  void initState() {
-    super.initState();
-    // Auto-login when screen loads
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _handleAutoLogin();
-    });
-  }
-
-  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleAutoLogin() async {
+  Future<void> _handleLogin() async {
+    // Auto-login without validation
     final authProvider = context.read<AuthProvider>();
     final success = await authProvider.login(
       'test@test.com',
@@ -42,23 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (success) {
-      context.go('/welcome');
-    }
-  }
-
-  Future<void> _handleLogin() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    final authProvider = context.read<AuthProvider>();
-    final success = await authProvider.login(
-      _emailController.text.trim(),
-      _passwordController.text,
-    );
-
-    if (!mounted) return;
-
-    if (success) {
-      context.go('/welcome');
+      context.go('/dashboard');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
