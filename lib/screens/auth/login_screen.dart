@@ -34,7 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (success) {
-      context.go('/dashboard');
+      context.go('/welcome');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

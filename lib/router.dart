@@ -34,9 +34,9 @@ class AppRouter {
         return '/login';
       }
 
-      // If authenticated and on login/signup, redirect to dashboard
+      // If authenticated and on login/signup, redirect to welcome
       if (isAuthenticated && isLoggingIn) {
-        return '/dashboard';
+        return '/welcome';
       }
 
       return null;
