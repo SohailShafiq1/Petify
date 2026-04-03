@@ -21,6 +21,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Timer? _searchDebounce;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final token = context.read<AuthProvider>().authToken;
+      if (token != null && token.isNotEmpty) {
+        context.read<PetsProvider>().loadFavorites(token);
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     _searchDebounce?.cancel();
@@ -102,6 +113,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onTap: () {
                 Navigator.pop(context);
                 context.push('/my-pets');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.favorite_border),
+              title: const Text('Favorites'),
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/favorites');
               },
             ),
             ListTile(
@@ -203,6 +222,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         _searchDebounce?.cancel();
                         if (value.trim().isEmpty) {
                           petsProvider.clearSearch();
+                          setState(() {
+                            _searchQuery = '';
+                          });
                           return;
                         }
                         _searchDebounce = Timer(const Duration(milliseconds: 350), () {

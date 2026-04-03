@@ -2,7 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../models/pet_model.dart';
+import '../providers/auth_provider.dart';
+import '../providers/pets_provider.dart';
 
 class PetCard extends StatelessWidget {
   final PetModel pet;
@@ -27,6 +30,10 @@ class PetCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final petsProvider = context.watch<PetsProvider>();
+    final authProvider = context.watch<AuthProvider>();
+    final isFavorite = petsProvider.isFavorite(pet.id);
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
@@ -49,44 +56,91 @@ class PetCard extends StatelessWidget {
               child: SizedBox(
                 height: 200,
                 width: double.infinity,
-                child: pet.imagePath != null
-                    ? (pet.imagePath!.startsWith('/')
-                        ? Image.network(
-                            _getImageUrl(),
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: Colors.grey.shade200,
-                                child: Icon(
-                                  Icons.pets,
-                                  size: 80,
-                                  color: Colors.grey.shade400,
-                                ),
-                              );
-                            },
-                          )
-                        : Image.file(
-                            File(pet.imagePath!),
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: Colors.grey.shade200,
-                                child: Icon(
-                                  Icons.pets,
-                                  size: 80,
-                                  color: Colors.grey.shade400,
-                                ),
-                              );
-                            },
-                          ))
-                    : Container(
-                        color: Colors.grey.shade200,
-                        child: Icon(
-                          Icons.pets,
-                          size: 80,
-                          color: Colors.grey.shade400,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: pet.imagePath != null
+                          ? (pet.imagePath!.startsWith('/'))
+                              ? Image.network(
+                                  _getImageUrl(),
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      color: Colors.grey.shade200,
+                                      child: Icon(
+                                        Icons.pets,
+                                        size: 80,
+                                        color: Colors.grey.shade400,
+                                      ),
+                                    );
+                                  },
+                                )
+                              : Image.file(
+                                  File(pet.imagePath!),
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      color: Colors.grey.shade200,
+                                      child: Icon(
+                                        Icons.pets,
+                                        size: 80,
+                                        color: Colors.grey.shade400,
+                                      ),
+                                    );
+                                  },
+                                )
+                          : Container(
+                              color: Colors.grey.shade200,
+                              child: Icon(
+                                Icons.pets,
+                                size: 80,
+                                color: Colors.grey.shade400,
+                              ),
+                            ),
+                    ),
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: () async {
+                          final token = authProvider.authToken;
+                          if (token == null || token.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Please log in to save favorites.')),
+                            );
+                            return;
+                          }
+
+                          final success = await petsProvider.toggleFavorite(
+                            token: token,
+                            pet: pet,
+                          );
+
+                          if (!context.mounted) return;
+
+                          if (!success) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(petsProvider.errorMessage ?? 'Update failed.')),
+                            );
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.9),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            isFavorite ? Icons.favorite : Icons.favorite_border,
+                            color: isFavorite ? Colors.red : Colors.grey.shade700,
+                            size: 20,
+                          ),
                         ),
                       ),
+                    ),
+                  ],
+                ),
               ),
             ),
 

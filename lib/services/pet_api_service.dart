@@ -196,6 +196,41 @@ class PetApiService {
     }
   }
 
+  Future<Map<String, dynamic>> getFavorites(String token) async {
+    try {
+      final response = await http.get(
+        _uri('/api/pets/favorites'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      return _parseResponse(response);
+    } on SocketException {
+      throw Exception('Cannot reach backend. Check API_BASE_URL and backend server status.');
+    }
+  }
+
+  Future<Map<String, dynamic>> toggleFavorite({
+    required String token,
+    required String petId,
+  }) async {
+    try {
+      final response = await http.post(
+        _uri('/api/pets/$petId/favorite'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      return _parseResponse(response);
+    } on SocketException {
+      throw Exception('Cannot reach backend. Check API_BASE_URL and backend server status.');
+    }
+  }
+
   Future<Map<String, dynamic>> updatePet({
     required String token,
     required String petId,

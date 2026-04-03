@@ -17,6 +17,7 @@ import 'screens/my_pets_screen.dart';
 import 'screens/my_orders_screen.dart';
 import 'screens/my_sales_screen.dart';
 import 'screens/chats_screen.dart';
+import 'screens/favorites_screen.dart';
 
 class AppRouter {
   final AuthProvider authProvider;
@@ -108,6 +109,10 @@ class AppRouter {
       GoRoute(
         path: '/my-pets',
         builder: (context, state) => const MyPetsScreen(),
+      ),
+      GoRoute(
+        path: '/favorites',
+        builder: (context, state) => const FavoritesScreen(),
       ),
       GoRoute(
         path: '/my-orders',

@@ -46,6 +46,7 @@ class PetDetailsScreen extends StatelessWidget {
     final petsProvider = context.watch<PetsProvider>();
     final currentUserId = authProvider.currentUser?.id;
     final isOwner = currentUserId != null && currentUserId == pet.ownerId;
+    final isFavorite = petsProvider.isFavorite(pet.id);
 
     return Scaffold(
       body: CustomScrollView(
@@ -55,6 +56,36 @@ class PetDetailsScreen extends StatelessWidget {
             expandedHeight: 300,
             pinned: true,
             backgroundColor: Colors.blue.shade700,
+            actions: [
+              IconButton(
+                onPressed: () async {
+                  final token = authProvider.authToken;
+                  if (token == null || token.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please log in to save favorites.')),
+                    );
+                    return;
+                  }
+
+                  final success = await petsProvider.toggleFavorite(
+                    token: token,
+                    pet: pet,
+                  );
+
+                  if (!context.mounted) return;
+
+                  if (!success) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(petsProvider.errorMessage ?? 'Update failed.')),
+                    );
+                  }
+                },
+                icon: Icon(
+                  isFavorite ? Icons.favorite : Icons.favorite_border,
+                  color: isFavorite ? Colors.red.shade200 : Colors.white,
+                ),
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               background: pet.imagePath != null
                   ? (pet.imagePath!.startsWith('/'))
