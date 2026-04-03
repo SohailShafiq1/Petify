@@ -230,6 +230,82 @@ class PetDetailsScreen extends StatelessWidget {
                           color: Colors.grey.shade600,
                         ),
                   ),
+                  if (isOwner && !pet.isAvailable)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Buyer Details',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.person, color: Colors.grey.shade600),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        pet.buyerName ?? 'Unknown',
+                                        style: Theme.of(context).textTheme.bodyLarge,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Icon(Icons.phone, color: Colors.grey.shade600),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        pet.buyerContact ?? 'Unknown',
+                                        style: Theme.of(context).textTheme.bodyLarge,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(Icons.location_on, color: Colors.grey.shade600),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        pet.buyerAddress ?? 'Unknown',
+                                        style: Theme.of(context).textTheme.bodyLarge,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (pet.soldAt != null) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Sold ${DateFormat('MMM dd, yyyy').format(pet.soldAt!)}',
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                          color: Colors.grey.shade600,
+                                        ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   const SizedBox(height: 100),
                 ],
               ),

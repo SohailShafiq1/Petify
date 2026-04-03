@@ -29,6 +29,13 @@ class _MyPetsScreenState extends State<MyPetsScreen> with SingleTickerProviderSt
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = context.read<AuthProvider>();
+      final token = authProvider.authToken;
+      if (token != null && token.isNotEmpty) {
+        context.read<PetsProvider>().loadMyPets(token);
+      }
+    });
   }
 
   @override
@@ -39,11 +46,8 @@ class _MyPetsScreenState extends State<MyPetsScreen> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    final userId = context.watch<AuthProvider>().currentUser?.id ?? '';
     final petsProvider = context.watch<PetsProvider>();
-    
-    // Filter pets by owner
-    final myPets = petsProvider.allPets.where((pet) => pet.ownerId == userId).toList();
+    final myPets = petsProvider.myPets;
     final activePets = myPets.where((pet) => pet.isAvailable).toList();
     final soldPets = myPets.where((pet) => !pet.isAvailable).toList();
 
@@ -133,7 +137,7 @@ class _MyPetsScreenState extends State<MyPetsScreen> with SingleTickerProviderSt
       margin: const EdgeInsets.only(bottom: 16),
       child: InkWell(
         onTap: () {
-          context.push('/pet/${pet.id}');
+          context.push('/pet/${pet.id}', extra: pet);
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
