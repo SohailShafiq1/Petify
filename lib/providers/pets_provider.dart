@@ -9,6 +9,9 @@ class PetsProvider extends ChangeNotifier {
   List<PetModel> _allPets = [];
   List<PetModel> _myPets = [];
   List<PetModel> _myOrders = [];
+  List<PetModel> _mySales = [];
+  List<PetModel> _searchResults = [];
+  bool _isSearching = false;
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -19,6 +22,9 @@ class PetsProvider extends ChangeNotifier {
   List<PetModel> get allPets => _allPets;
   List<PetModel> get myPets => _myPets;
   List<PetModel> get myOrders => _myOrders;
+  List<PetModel> get mySales => _mySales;
+  List<PetModel> get searchResults => _searchResults;
+  bool get isSearching => _isSearching;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
@@ -80,6 +86,61 @@ class PetsProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> loadMySales(String token) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _petApiService.getMySales(token);
+      final petsList = response['pets'] as List;
+      _mySales = petsList
+          .map((pet) => PetModel.fromJson(pet as Map<String, dynamic>))
+          .toList();
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> searchPets(String query) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) {
+      _searchResults = [];
+      _isSearching = false;
+      notifyListeners();
+      return;
+    }
+
+    _isSearching = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _petApiService.searchPets(trimmed);
+      final petsList = response['pets'] as List;
+      _searchResults = petsList
+          .map((pet) => PetModel.fromJson(pet as Map<String, dynamic>))
+          .toList();
+      _isSearching = false;
+      notifyListeners();
+    } catch (e) {
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      _isSearching = false;
+      notifyListeners();
+    }
+  }
+
+  void clearSearch() {
+    _searchResults = [];
+    _isSearching = false;
+    _errorMessage = null;
+    notifyListeners();
   }
 
   List<PetModel> getPetsByCategory(String category) {
@@ -159,6 +220,29 @@ class PetsProvider extends ChangeNotifier {
       await loadPets();
           await loadMyPets(token);
           await loadMyOrders(token);
+      await loadMySales(token);
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> completeDelivery({
+    required String token,
+    required String petId,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _petApiService.completeDelivery(token: token, petId: petId);
+      await loadMySales(token);
       _isLoading = false;
       notifyListeners();
       return true;

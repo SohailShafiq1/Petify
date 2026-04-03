@@ -179,15 +179,22 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
+                            color: (pet.deliveryStatus == 'completed'
+                                    ? Colors.green
+                                    : Colors.orange)
+                                .withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Text(
-                            'BOUGHT',
+                          child: Text(
+                            (pet.deliveryStatus == 'completed')
+                                ? 'DELIVERED'
+                                : 'PENDING',
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
-                              color: Colors.green,
+                              color: pet.deliveryStatus == 'completed'
+                                  ? Colors.green
+                                  : Colors.orange,
                             ),
                           ),
                         ),

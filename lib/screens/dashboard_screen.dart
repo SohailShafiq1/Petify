@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -17,10 +18,12 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  Timer? _searchDebounce;
 
   @override
   void dispose() {
     _searchController.dispose();
+    _searchDebounce?.cancel();
     super.dispose();
   }
 
@@ -30,13 +33,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final petsProvider = context.watch<PetsProvider>();
     final categories = CategoryModel.getDummyCategories();
 
-    // Filter pets based on search query
     final filteredPets = _searchQuery.isEmpty
-        ? petsProvider.topSellingPets
-        : petsProvider.allPets.where((pet) {
-            return pet.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                pet.category.toLowerCase().contains(_searchQuery.toLowerCase());
-          }).toList();
+      ? petsProvider.topSellingPets
+      : petsProvider.searchResults;
 
     return Scaffold(
       appBar: AppBar(
@@ -111,6 +110,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onTap: () {
                 Navigator.pop(context);
                 context.push('/my-orders');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.receipt_long),
+              title: const Text('My Sales'),
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/my-sales');
               },
             ),
             ListTile(
@@ -192,6 +199,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       onChanged: (value) {
                         setState(() {
                           _searchQuery = value;
+                        });
+                        _searchDebounce?.cancel();
+                        if (value.trim().isEmpty) {
+                          petsProvider.clearSearch();
+                          return;
+                        }
+                        _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+                          petsProvider.searchPets(value);
                         });
                       },
                       decoration: InputDecoration(
@@ -280,7 +295,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                     ),
                     const SizedBox(height: 12),
-                    petsProvider.isLoading
+                        (_searchQuery.isEmpty
+                          ? petsProvider.isLoading
+                          : petsProvider.isSearching)
                         ? const Center(child: CircularProgressIndicator())
                         : filteredPets.isEmpty
                             ? Center(

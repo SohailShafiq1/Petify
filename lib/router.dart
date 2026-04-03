@@ -15,6 +15,7 @@ import 'screens/orders_screen.dart';
 import 'screens/change_password_screen.dart';
 import 'screens/my_pets_screen.dart';
 import 'screens/my_orders_screen.dart';
+import 'screens/my_sales_screen.dart';
 import 'screens/chats_screen.dart';
 
 class AppRouter {
@@ -111,6 +112,10 @@ class AppRouter {
       GoRoute(
         path: '/my-orders',
         builder: (context, state) => const MyOrdersScreen(),
+      ),
+      GoRoute(
+        path: '/my-sales',
+        builder: (context, state) => const MySalesScreen(),
       ),
       GoRoute(
         path: '/chats',

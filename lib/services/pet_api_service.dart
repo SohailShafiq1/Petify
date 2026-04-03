@@ -122,6 +122,41 @@ class PetApiService {
     }
   }
 
+  Future<Map<String, dynamic>> getMySales(String token) async {
+    try {
+      final response = await http.get(
+        _uri('/api/pets/my-sales'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      return _parseResponse(response);
+    } on SocketException {
+      throw Exception('Cannot reach backend. Check API_BASE_URL and backend server status.');
+    }
+  }
+
+  Future<Map<String, dynamic>> completeDelivery({
+    required String token,
+    required String petId,
+  }) async {
+    try {
+      final response = await http.post(
+        _uri('/api/pets/$petId/complete-delivery'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      return _parseResponse(response);
+    } on SocketException {
+      throw Exception('Cannot reach backend. Check API_BASE_URL and backend server status.');
+    }
+  }
+
   Future<Map<String, dynamic>> getPetById(String petId) async {
     try {
       final response = await http.get(
@@ -139,6 +174,19 @@ class PetApiService {
     try {
       final response = await http.get(
         _uri('/api/pets/category/$category'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      return _parseResponse(response);
+    } on SocketException {
+      throw Exception('Cannot reach backend. Check API_BASE_URL and backend server status.');
+    }
+  }
+
+  Future<Map<String, dynamic>> searchPets(String query) async {
+    try {
+      final response = await http.get(
+        _uri('/api/pets/search?q=${Uri.encodeQueryComponent(query)}'),
         headers: {'Content-Type': 'application/json'},
       );
 
