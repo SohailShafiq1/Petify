@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../models/pet_model.dart';
+import '../providers/auth_provider.dart';
+import '../providers/pets_provider.dart';
 
 class PetDetailsScreen extends StatelessWidget {
   final String petId;
@@ -38,6 +41,11 @@ class PetDetailsScreen extends StatelessWidget {
         ),
       );
     }
+
+    final authProvider = context.watch<AuthProvider>();
+    final petsProvider = context.watch<PetsProvider>();
+    final currentUserId = authProvider.currentUser?.id;
+    final isOwner = currentUserId != null && currentUserId == pet.ownerId;
 
     return Scaffold(
       body: CustomScrollView(
@@ -242,32 +250,173 @@ class PetDetailsScreen extends StatelessWidget {
           ],
         ),
         child: SafeArea(
-          child: ElevatedButton(
-            onPressed: () {
-              context.push('/chat/${pet.id}', extra: pet);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue.shade700,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.chat_bubble_outline),
-                SizedBox(width: 8),
-                Text(
-                  'Chat With Owner',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    context.push('/chat/${pet.id}', extra: pet);
+                  },
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    side: BorderSide(color: Colors.blue.shade700),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: Icon(Icons.chat_bubble_outline, color: Colors.blue.shade700),
+                  label: Text(
+                    'Chat',
+                    style: TextStyle(
+                      color: Colors.blue.shade700,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: (!pet.isAvailable || isOwner || petsProvider.isLoading)
+                      ? null
+                      : () async {
+                          final token = authProvider.authToken;
+                          if (token == null || token.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Please log in to buy this pet.')),
+                            );
+                            return;
+                          }
+
+                          final nameController = TextEditingController();
+                          final contactController = TextEditingController();
+                          final addressController = TextEditingController();
+                          final formKey = GlobalKey<FormState>();
+
+                          final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (context) {
+                              return AlertDialog(
+                                title: const Text('Buy This Pet (COD)'),
+                                content: Form(
+                                  key: formKey,
+                                  child: SingleChildScrollView(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        TextFormField(
+                                          controller: nameController,
+                                          decoration: const InputDecoration(
+                                            labelText: 'Full name',
+                                          ),
+                                          textInputAction: TextInputAction.next,
+                                          validator: (value) {
+                                            if (value == null || value.trim().isEmpty) {
+                                              return 'Name is required';
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                        const SizedBox(height: 12),
+                                        TextFormField(
+                                          controller: contactController,
+                                          decoration: const InputDecoration(
+                                            labelText: 'Contact number',
+                                          ),
+                                          keyboardType: TextInputType.phone,
+                                          textInputAction: TextInputAction.next,
+                                          validator: (value) {
+                                            if (value == null || value.trim().isEmpty) {
+                                              return 'Contact number is required';
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                        const SizedBox(height: 12),
+                                        TextFormField(
+                                          controller: addressController,
+                                          decoration: const InputDecoration(
+                                            labelText: 'Delivery address',
+                                          ),
+                                          keyboardType: TextInputType.streetAddress,
+                                          textInputAction: TextInputAction.done,
+                                          maxLines: 2,
+                                          validator: (value) {
+                                            if (value == null || value.trim().isEmpty) {
+                                              return 'Address is required';
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          'Payment method: Cash on Delivery (COD).',
+                                          style: TextStyle(color: Colors.grey.shade600),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(context).pop(false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      if (formKey.currentState?.validate() != true) return;
+                                      Navigator.of(context).pop(true);
+                                    },
+                                    child: const Text('Confirm'),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+
+                          if (confirmed != true) return;
+
+                          final success = await petsProvider.buyPet(
+                            token: token,
+                            petId: pet.id,
+                            buyerName: nameController.text.trim(),
+                            buyerContact: contactController.text.trim(),
+                            buyerAddress: addressController.text.trim(),
+                          );
+
+                          if (!context.mounted) return;
+
+                          if (success) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Purchase successful. Pet marked as sold.')),
+                            );
+                            context.pop();
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(petsProvider.errorMessage ?? 'Purchase failed.')),
+                            );
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue.shade700,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: const Icon(Icons.shopping_bag_outlined),
+                  label: Text(
+                    pet.isAvailable
+                        ? (isOwner ? 'Your Listing' : 'Buy This Pet')
+                        : 'Sold',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

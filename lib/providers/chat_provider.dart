@@ -1,86 +1,99 @@
 import 'package:flutter/foundation.dart';
 import '../models/chat_message_model.dart';
-import '../services/local_storage_service.dart';
+import '../providers/auth_provider.dart';
+import '../services/chat_api_service.dart';
 
 class ChatProvider extends ChangeNotifier {
-  final LocalStorageService _storageService;
+  final ChatApiService _chatApiService = ChatApiService();
+  AuthProvider _authProvider;
   Map<String, List<ChatMessageModel>> _chatsByPetId = {};
+  bool _isLoading = false;
+  String? _errorMessage;
 
-  ChatProvider(this._storageService);
+  ChatProvider(this._authProvider);
+
+  bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
+
+  void updateAuth(AuthProvider authProvider) {
+    _authProvider = authProvider;
+  }
 
   List<ChatMessageModel> getChatMessages(String petId) {
-    if (!_chatsByPetId.containsKey(petId)) {
-      _chatsByPetId[petId] = _storageService.getChatMessagesForPet(petId);
-    }
     return _chatsByPetId[petId] ?? [];
   }
 
-  Future<void> sendMessage({
+  Future<void> loadMessages(String petId, {bool silent = false}) async {
+    final token = _authProvider.authToken;
+    final currentUserId = _authProvider.currentUser?.id;
+    if (token == null || token.isEmpty || currentUserId == null) {
+      return;
+    }
+
+    if (!silent) {
+      _isLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+    }
+
+    try {
+      final response = await _chatApiService.getMessages(
+        token: token,
+        petId: petId,
+      );
+      final messages = (response['messages'] as List?) ?? [];
+      _chatsByPetId[petId] = messages
+          .map((message) => ChatMessageModel.fromApi(
+                message as Map<String, dynamic>,
+                currentUserId: currentUserId,
+              ))
+          .toList();
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> sendMessage({
     required String petId,
-    required String senderId,
-    required String senderName,
     required String message,
-    required bool isCurrentUser,
   }) async {
-    final chatMessage = ChatMessageModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      petId: petId,
-      senderId: senderId,
-      senderName: senderName,
-      message: message,
-      timestamp: DateTime.now(),
-      isCurrentUser: isCurrentUser,
-    );
-
-    await _storageService.saveChatMessage(chatMessage);
-    
-    // Update local cache
-    if (!_chatsByPetId.containsKey(petId)) {
-      _chatsByPetId[petId] = [];
+    final token = _authProvider.authToken;
+    final currentUserId = _authProvider.currentUser?.id;
+    if (token == null || token.isEmpty || currentUserId == null) {
+      return false;
     }
-    _chatsByPetId[petId]!.add(chatMessage);
-    notifyListeners();
 
-    // Simulate owner response after 2 seconds
-    if (isCurrentUser) {
-      Future.delayed(const Duration(seconds: 2), () {
-        _simulateOwnerResponse(petId);
-      });
+    try {
+      final response = await _chatApiService.sendMessage(
+        token: token,
+        petId: petId,
+        message: message,
+      );
+
+      final chatMessage = response['chatMessage'] as Map<String, dynamic>;
+      final parsed = ChatMessageModel.fromApi(
+        chatMessage,
+        currentUserId: currentUserId,
+      );
+
+      if (!_chatsByPetId.containsKey(petId)) {
+        _chatsByPetId[petId] = [];
+      }
+      _chatsByPetId[petId]!.add(parsed);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+      return false;
     }
   }
 
-  Future<void> _simulateOwnerResponse(String petId) async {
-    final responses = [
-      "Thanks for your interest! The pet is still available.",
-      "Hello! Yes, I'm happy to answer any questions.",
-      "The pet is in great condition and ready for a new home!",
-      "Feel free to come visit and meet the pet anytime.",
-      "I can provide more photos if you'd like!",
-    ];
-
-    final randomResponse = responses[DateTime.now().millisecond % responses.length];
-
-    final ownerMessage = ChatMessageModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      petId: petId,
-      senderId: 'owner',
-      senderName: 'Pet Owner',
-      message: randomResponse,
-      timestamp: DateTime.now(),
-      isCurrentUser: false,
-    );
-
-    await _storageService.saveChatMessage(ownerMessage);
-    
-    if (!_chatsByPetId.containsKey(petId)) {
-      _chatsByPetId[petId] = [];
-    }
-    _chatsByPetId[petId]!.add(ownerMessage);
-    notifyListeners();
-  }
-
-  void loadMessages(String petId) {
-    _chatsByPetId[petId] = _storageService.getChatMessagesForPet(petId);
-    notifyListeners();
+  Future<void> refreshMessages(String petId) async {
+    await loadMessages(petId, silent: true);
   }
 }

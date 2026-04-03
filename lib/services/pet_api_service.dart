@@ -186,6 +186,33 @@ class PetApiService {
     }
   }
 
+  Future<Map<String, dynamic>> buyPet({
+    required String token,
+    required String petId,
+    required String buyerName,
+    required String buyerContact,
+    required String buyerAddress,
+  }) async {
+    try {
+      final response = await http.post(
+        _uri('/api/pets/$petId/buy'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'buyerName': buyerName,
+          'buyerContact': buyerContact,
+          'buyerAddress': buyerAddress,
+        }),
+      );
+
+      return _parseResponse(response);
+    } on SocketException {
+      throw Exception('Cannot reach backend. Check API_BASE_URL and backend server status.');
+    }
+  }
+
   Map<String, dynamic> _parseResponse(http.Response response) {
     final Map<String, dynamic> body = response.body.isEmpty
         ? <String, dynamic>{}

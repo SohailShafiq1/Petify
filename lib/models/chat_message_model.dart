@@ -58,4 +58,25 @@ class ChatMessageModel extends HiveObject {
       isCurrentUser: json['isCurrentUser'] as bool,
     );
   }
+
+  factory ChatMessageModel.fromApi(
+    Map<String, dynamic> json, {
+    required String currentUserId,
+  }) {
+    final senderId = (json['senderId'] ?? '').toString();
+    final timestampValue = json['createdAt'] ?? json['timestamp'];
+    final timestamp = timestampValue != null
+        ? DateTime.parse(timestampValue.toString())
+        : DateTime.now();
+
+    return ChatMessageModel(
+      id: (json['_id'] ?? json['id'] ?? '').toString(),
+      petId: (json['petId'] ?? '').toString(),
+      senderId: senderId,
+      senderName: (json['senderName'] ?? '').toString(),
+      message: (json['message'] ?? '').toString(),
+      timestamp: timestamp,
+      isCurrentUser: senderId == currentUserId,
+    );
+  }
 }

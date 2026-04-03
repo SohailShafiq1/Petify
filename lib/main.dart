@@ -47,8 +47,10 @@ class PetifyApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => PetsProvider(storageService),
         ),
-        ChangeNotifierProvider(
-          create: (_) => ChatProvider(storageService),
+        ChangeNotifierProxyProvider<AuthProvider, ChatProvider>(
+          create: (context) => ChatProvider(context.read<AuthProvider>()),
+          update: (context, authProvider, chatProvider) =>
+              chatProvider!..updateAuth(authProvider),
         ),
         ChangeNotifierProvider(
           create: (_) => ProfileProvider(storageService),

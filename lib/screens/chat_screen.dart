@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -22,6 +23,7 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
+  Timer? _pollTimer;
 
   @override
   void initState() {
@@ -30,12 +32,17 @@ class _ChatScreenState extends State<ChatScreen> {
       context.read<ChatProvider>().loadMessages(widget.petId);
       _scrollToBottom();
     });
+
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      context.read<ChatProvider>().refreshMessages(widget.petId);
+    });
   }
 
   @override
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
+    _pollTimer?.cancel();
     super.dispose();
   }
 
@@ -54,21 +61,14 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _sendMessage() async {
     if (_messageController.text.trim().isEmpty) return;
 
-    final authProvider = context.read<AuthProvider>();
     final chatProvider = context.read<ChatProvider>();
-    final user = authProvider.currentUser;
-
-    if (user == null) return;
 
     final message = _messageController.text.trim();
     _messageController.clear();
 
     await chatProvider.sendMessage(
       petId: widget.petId,
-      senderId: user.id,
-      senderName: user.name,
       message: message,
-      isCurrentUser: true,
     );
 
     _scrollToBottom();

@@ -114,4 +114,36 @@ class PetsProvider extends ChangeNotifier {
   Future<void> refreshPets() async {
     await loadPets();
   }
+
+  Future<bool> buyPet({
+    required String token,
+    required String petId,
+    required String buyerName,
+    required String buyerContact,
+    required String buyerAddress,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _petApiService.buyPet(
+        token: token,
+        petId: petId,
+        buyerName: buyerName,
+        buyerContact: buyerContact,
+        buyerAddress: buyerAddress,
+      );
+      await loadPets();
+      await loadMyPets(token);
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
 }
