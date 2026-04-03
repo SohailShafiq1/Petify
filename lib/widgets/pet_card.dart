@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
 import '../models/pet_model.dart';
 
@@ -10,6 +11,19 @@ class PetCard extends StatelessWidget {
     super.key,
     required this.pet,
   });
+
+  String _getImageUrl() {
+    if (pet.imagePath == null) return '';
+    
+    // If imagePath is a URL path (starts with /), construct full URL
+    if (pet.imagePath!.startsWith('/')) {
+      final baseUrl = dotenv.env['API_BASE_URL']?.trim() ?? 'http://localhost:5001';
+      return '$baseUrl${pet.imagePath}';
+    }
+    
+    // Otherwise, it's a local file path
+    return pet.imagePath!;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,10 +50,35 @@ class PetCard extends StatelessWidget {
                 height: 200,
                 width: double.infinity,
                 child: pet.imagePath != null
-                    ? Image.file(
-                        File(pet.imagePath!),
-                        fit: BoxFit.cover,
-                      )
+                    ? (pet.imagePath!.startsWith('/')
+                        ? Image.network(
+                            _getImageUrl(),
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: Colors.grey.shade200,
+                                child: Icon(
+                                  Icons.pets,
+                                  size: 80,
+                                  color: Colors.grey.shade400,
+                                ),
+                              );
+                            },
+                          )
+                        : Image.file(
+                            File(pet.imagePath!),
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: Colors.grey.shade200,
+                                child: Icon(
+                                  Icons.pets,
+                                  size: 80,
+                                  color: Colors.grey.shade400,
+                                ),
+                              );
+                            },
+                          ))
                     : Container(
                         color: Colors.grey.shade200,
                         child: Icon(

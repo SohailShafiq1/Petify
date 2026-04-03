@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../models/pet_model.dart';
@@ -11,6 +12,15 @@ class PetDetailsScreen extends StatelessWidget {
     super.key,
     required this.petId,
   });
+
+  String _getImageUrl(String imagePath) {
+    if (imagePath.startsWith('/')) {
+      final baseUrl = dotenv.env['API_BASE_URL']?.trim() ?? 'http://localhost:5001';
+      return '$baseUrl$imagePath';
+    }
+
+    return imagePath;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,10 +49,35 @@ class PetDetailsScreen extends StatelessWidget {
             backgroundColor: Colors.blue.shade700,
             flexibleSpace: FlexibleSpaceBar(
               background: pet.imagePath != null
-                  ? Image.file(
-                      File(pet.imagePath!),
-                      fit: BoxFit.cover,
-                    )
+                  ? (pet.imagePath!.startsWith('/'))
+                      ? Image.network(
+                          _getImageUrl(pet.imagePath!),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey.shade300,
+                              child: Icon(
+                                Icons.pets,
+                                size: 100,
+                                color: Colors.grey.shade400,
+                              ),
+                            );
+                          },
+                        )
+                      : Image.file(
+                          File(pet.imagePath!),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey.shade300,
+                              child: Icon(
+                                Icons.pets,
+                                size: 100,
+                                color: Colors.grey.shade400,
+                              ),
+                            );
+                          },
+                        )
                   : Container(
                       color: Colors.grey.shade300,
                       child: Icon(

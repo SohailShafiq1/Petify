@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/pets_provider.dart';
@@ -14,6 +15,15 @@ class MyPetsScreen extends StatefulWidget {
 
 class _MyPetsScreenState extends State<MyPetsScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+
+  String _getImageUrl(String imagePath) {
+    if (imagePath.startsWith('/')) {
+      final baseUrl = dotenv.env['API_BASE_URL']?.trim() ?? 'http://localhost:5001';
+      return '$baseUrl$imagePath';
+    }
+
+    return imagePath;
+  }
 
   @override
   void initState() {
@@ -142,7 +152,7 @@ class _MyPetsScreenState extends State<MyPetsScreen> with SingleTickerProviderSt
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(12),
                         child: Image.network(
-                          pet.imagePath!,
+                          _getImageUrl(pet.imagePath!),
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) {
                             return const Icon(
