@@ -101,35 +101,44 @@ class _AddPetScreenState extends State<AddPetScreen> {
 
     final authProvider = context.read<AuthProvider>();
     final petsProvider = context.read<PetsProvider>();
-    final user = authProvider.currentUser;
+    final token = authProvider.authToken;
 
-    if (user == null) return;
+    if (token == null || token.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Not authenticated. Please login again.')),
+      );
+      return;
+    }
 
-    final newPet = PetModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+    final success = await petsProvider.addPet(
+      token: token,
       name: _nameController.text.trim(),
       category: _selectedCategory!,
       age: int.parse(_ageController.text.trim()),
       description: _descriptionController.text.trim(),
       price: double.parse(_priceController.text.trim()),
-      ownerName: user.name,
       ownerContact: _ownerContactController.text.trim(),
-      ownerId: user.id,
       imagePath: _imagePath,
     );
 
-    await petsProvider.addPet(newPet);
-
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Pet added successfully!'),
-        backgroundColor: Colors.green,
-      ),
-    );
-
-    context.pop();
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pet added successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      context.pop();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(petsProvider.errorMessage ?? 'Failed to add pet'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override

@@ -74,7 +74,7 @@ class PetModel extends HiveObject {
 
   factory PetModel.fromJson(Map<String, dynamic> json) {
     return PetModel(
-      id: json['id'] as String,
+      id: json['_id'] ?? json['id'] ?? '',
       name: json['name'] as String,
       category: json['category'] as String,
       age: json['age'] as int,
@@ -83,8 +83,8 @@ class PetModel extends HiveObject {
       ownerName: json['ownerName'] as String,
       ownerContact: json['ownerContact'] as String,
       ownerId: json['ownerId'] as String,
-      imagePath: json['imagePath'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      imagePath: json['imageUrl'] as String?,
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : null,
       isAvailable: json['isAvailable'] as bool? ?? true,
     );
   }

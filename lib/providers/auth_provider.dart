@@ -18,6 +18,7 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _currentUser != null && _storageService.getAuthToken() != null;
+  String? get authToken => _storageService.getAuthToken();
 
   Future<void> _loadCurrentUser() async {
     final token = _storageService.getAuthToken();
