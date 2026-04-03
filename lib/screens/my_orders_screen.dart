@@ -38,6 +38,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
   Widget build(BuildContext context) {
     final petsProvider = context.watch<PetsProvider>();
     final orders = petsProvider.myOrders;
+    final isLoading = petsProvider.isLoading;
+    final errorMessage = petsProvider.errorMessage;
 
     return Scaffold(
       appBar: AppBar(
@@ -45,35 +47,52 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
         backgroundColor: Colors.blue.shade700,
         foregroundColor: Colors.white,
       ),
-      body: orders.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.shopping_bag_outlined,
-                    size: 64,
-                    color: Colors.grey.shade400,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No orders yet',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey.shade600,
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final token = context.read<AuthProvider>().authToken;
+          if (token != null && token.isNotEmpty) {
+            await context.read<PetsProvider>().loadMyOrders(token);
+          }
+        },
+        child: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : (errorMessage != null && errorMessage.isNotEmpty)
+                ? Center(
+                    child: Text(
+                      errorMessage,
+                      style: const TextStyle(color: Colors.red),
                     ),
-                  ),
-                ],
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: orders.length,
-              itemBuilder: (context, index) {
-                final pet = orders[index];
-                return _buildOrderCard(pet);
-              },
-            ),
+                  )
+                : orders.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.shopping_bag_outlined,
+                              size: 64,
+                              color: Colors.grey.shade400,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No orders yet',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: orders.length,
+                        itemBuilder: (context, index) {
+                          final pet = orders[index];
+                          return _buildOrderCard(pet);
+                        },
+                      ),
+      ),
     );
   }
 

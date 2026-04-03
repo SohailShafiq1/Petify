@@ -157,7 +157,8 @@ class PetsProvider extends ChangeNotifier {
         buyerAddress: buyerAddress,
       );
       await loadPets();
-      await loadMyPets(token);
+          await loadMyPets(token);
+          await loadMyOrders(token);
       _isLoading = false;
       notifyListeners();
       return true;
