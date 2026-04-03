@@ -9,6 +9,7 @@ class LocalStorageService {
   static const String _petsBoxName = 'pets';
   static const String _chatsBoxName = 'chats';
   static const String _currentUserIdKey = 'currentUserId';
+  static const String _authTokenKey = 'authToken';
 
   late Box<UserModel> _usersBox;
   late Box<PetModel> _petsBox;
@@ -224,6 +225,14 @@ class LocalStorageService {
     return _prefs.getString(_currentUserIdKey);
   }
 
+  Future<void> setAuthToken(String token) async {
+    await _prefs.setString(_authTokenKey, token);
+  }
+
+  String? getAuthToken() {
+    return _prefs.getString(_authTokenKey);
+  }
+
   UserModel? getCurrentUser() {
     final userId = getCurrentUserId();
     if (userId == null) return null;
@@ -232,6 +241,7 @@ class LocalStorageService {
 
   Future<void> logout() async {
     await _prefs.remove(_currentUserIdKey);
+    await _prefs.remove(_authTokenKey);
   }
 
   // Pet operations

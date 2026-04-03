@@ -24,11 +24,12 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
-    // Auto-login without validation
+    if (!_formKey.currentState!.validate()) return;
+
     final authProvider = context.read<AuthProvider>();
     final success = await authProvider.login(
-      'test@test.com',
-      '123456',
+      _emailController.text.trim(),
+      _passwordController.text,
     );
 
     if (!mounted) return;

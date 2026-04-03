@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
+import '../services/auth_api_service.dart';
 import '../services/local_storage_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   final LocalStorageService _storageService;
+  final AuthApiService _authApiService = AuthApiService();
   UserModel? _currentUser;
   bool _isLoading = false;
   String? _errorMessage;
@@ -15,10 +17,27 @@ class AuthProvider extends ChangeNotifier {
   UserModel? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
-  bool get isAuthenticated => _currentUser != null;
+  bool get isAuthenticated => _currentUser != null && _storageService.getAuthToken() != null;
 
-  void _loadCurrentUser() {
+  Future<void> _loadCurrentUser() async {
+    final token = _storageService.getAuthToken();
     _currentUser = _storageService.getCurrentUser();
+
+    if (token != null && token.isNotEmpty) {
+      try {
+        final meResponse = await _authApiService.me(token);
+        final userJson = meResponse['user'] as Map<String, dynamic>?;
+        if (userJson != null) {
+          final syncedUser = _mapUserJson(userJson);
+          await _storageService.saveUser(syncedUser);
+          await _storageService.setCurrentUserId(syncedUser.id);
+          _currentUser = syncedUser;
+        }
+      } catch (_) {
+        await logout();
+      }
+    }
+
     notifyListeners();
   }
 
@@ -28,31 +47,24 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await Future.delayed(const Duration(milliseconds: 500)); // Simulate loading
+      final response = await _authApiService.login(
+        email: email,
+        password: password,
+      );
 
-      final user = _storageService.getUserByEmail(email);
-      
-      if (user == null) {
-        _errorMessage = 'User not found. Please sign up.';
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
+      final token = response['token'] as String;
+      final userJson = response['user'] as Map<String, dynamic>;
+      final user = _mapUserJson(userJson);
 
-      if (user.password != password) {
-        _errorMessage = 'Incorrect password.';
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-
+      await _storageService.setAuthToken(token);
+      await _storageService.saveUser(user);
       await _storageService.setCurrentUserId(user.id);
       _currentUser = user;
       _isLoading = false;
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = 'An error occurred during login.';
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
       _isLoading = false;
       notifyListeners();
       return false;
@@ -70,26 +82,17 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await Future.delayed(const Duration(milliseconds: 500)); // Simulate loading
-
-      // Check if user already exists
-      final existingUser = _storageService.getUserByEmail(email);
-      if (existingUser != null) {
-        _errorMessage = 'User with this email already exists.';
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-
-      // Create new user
-      final newUser = UserModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+      final response = await _authApiService.signup(
         name: name,
         email: email,
         password: password,
-        phone: phone,
       );
 
+      final token = response['token'] as String;
+      final userJson = response['user'] as Map<String, dynamic>;
+      final newUser = _mapUserJson(userJson, fallbackPhone: phone);
+
+      await _storageService.setAuthToken(token);
       await _storageService.saveUser(newUser);
       await _storageService.setCurrentUserId(newUser.id);
       _currentUser = newUser;
@@ -97,7 +100,7 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = 'An error occurred during signup.';
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
       _isLoading = false;
       notifyListeners();
       return false;
@@ -113,5 +116,21 @@ class AuthProvider extends ChangeNotifier {
   void clearError() {
     _errorMessage = null;
     notifyListeners();
+  }
+
+  UserModel _mapUserJson(
+    Map<String, dynamic> userJson, {
+    String fallbackPhone = '',
+  }) {
+    final userId = (userJson['id'] ?? userJson['_id'] ?? '').toString();
+
+    return UserModel(
+      id: userId,
+      name: (userJson['name'] ?? '').toString(),
+      email: (userJson['email'] ?? '').toString(),
+      password: '',
+      phone: fallbackPhone,
+      imagePath: null,
+    );
   }
 }

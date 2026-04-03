@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'services/local_storage_service.dart';
 import 'providers/auth_provider.dart';
@@ -11,6 +12,12 @@ import 'router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: '.env');
+  assert(() {
+    // ignore: avoid_print
+    print('Loaded API_BASE_URL=${dotenv.env['API_BASE_URL']}');
+    return true;
+  }());
   
   // Initialize local storage
   final storageService = LocalStorageService();
