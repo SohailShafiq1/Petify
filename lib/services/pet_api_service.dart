@@ -106,6 +106,22 @@ class PetApiService {
     }
   }
 
+  Future<Map<String, dynamic>> getMyOrders(String token) async {
+    try {
+      final response = await http.get(
+        _uri('/api/pets/my-orders'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      return _parseResponse(response);
+    } on SocketException {
+      throw Exception('Cannot reach backend. Check API_BASE_URL and backend server status.');
+    }
+  }
+
   Future<Map<String, dynamic>> getPetById(String petId) async {
     try {
       final response = await http.get(

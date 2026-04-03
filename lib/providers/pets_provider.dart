@@ -8,6 +8,7 @@ class PetsProvider extends ChangeNotifier {
   final PetApiService _petApiService = PetApiService();
   List<PetModel> _allPets = [];
   List<PetModel> _myPets = [];
+  List<PetModel> _myOrders = [];
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -17,6 +18,7 @@ class PetsProvider extends ChangeNotifier {
 
   List<PetModel> get allPets => _allPets;
   List<PetModel> get myPets => _myPets;
+  List<PetModel> get myOrders => _myOrders;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
@@ -51,6 +53,26 @@ class PetsProvider extends ChangeNotifier {
       final response = await _petApiService.getMyPets(token);
       final petsList = response['pets'] as List;
       _myPets = petsList.map((pet) => PetModel.fromJson(pet as Map<String, dynamic>)).toList();
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadMyOrders(String token) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _petApiService.getMyOrders(token);
+      final petsList = response['pets'] as List;
+      _myOrders = petsList
+          .map((pet) => PetModel.fromJson(pet as Map<String, dynamic>))
+          .toList();
       _isLoading = false;
       notifyListeners();
     } catch (e) {

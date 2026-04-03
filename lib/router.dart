@@ -14,6 +14,8 @@ import 'screens/settings_screen.dart';
 import 'screens/orders_screen.dart';
 import 'screens/change_password_screen.dart';
 import 'screens/my_pets_screen.dart';
+import 'screens/my_orders_screen.dart';
+import 'screens/chats_screen.dart';
 
 class AppRouter {
   final AuthProvider authProvider;
@@ -105,6 +107,14 @@ class AppRouter {
       GoRoute(
         path: '/my-pets',
         builder: (context, state) => const MyPetsScreen(),
+      ),
+      GoRoute(
+        path: '/my-orders',
+        builder: (context, state) => const MyOrdersScreen(),
+      ),
+      GoRoute(
+        path: '/chats',
+        builder: (context, state) => const ChatsScreen(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

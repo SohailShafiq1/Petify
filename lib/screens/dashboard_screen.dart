@@ -106,6 +106,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
               },
             ),
             ListTile(
+              leading: const Icon(Icons.shopping_bag_outlined),
+              title: const Text('My Orders'),
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/my-orders');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.chat_bubble_outline),
+              title: const Text('Chats'),
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/chats');
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.settings),
               title: const Text('Settings'),
               onTap: () {

@@ -54,6 +54,24 @@ class ChatApiService {
     }
   }
 
+  Future<Map<String, dynamic>> getMyThreads({
+    required String token,
+  }) async {
+    try {
+      final response = await http.get(
+        _uri('/api/chats/my'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      return _parseResponse(response);
+    } on SocketException {
+      throw Exception('Cannot reach backend. Check API_BASE_URL and backend server status.');
+    }
+  }
+
   Map<String, dynamic> _parseResponse(http.Response response) {
     final Map<String, dynamic> body = response.body.isEmpty
         ? <String, dynamic>{}

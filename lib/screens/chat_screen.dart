@@ -76,7 +76,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final pet = GoRouterState.of(context).extra as PetModel?;
+    final extra = GoRouterState.of(context).extra;
+    final pet = extra is PetModel ? extra : null;
+    final petName = pet?.name ?? (extra is Map ? extra['name']?.toString() : null);
+    final ownerName = pet?.ownerName ?? (extra is Map ? extra['ownerName']?.toString() : null);
     final chatProvider = context.watch<ChatProvider>();
     final messages = chatProvider.getChatMessages(widget.petId);
 
@@ -85,9 +88,9 @@ class _ChatScreenState extends State<ChatScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(pet?.name ?? 'Chat'),
+            Text(petName ?? 'Chat'),
             Text(
-              pet?.ownerName ?? 'Owner',
+              ownerName ?? 'Owner',
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.normal,

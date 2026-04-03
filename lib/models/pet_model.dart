@@ -52,6 +52,9 @@ class PetModel extends HiveObject {
   @HiveField(15)
   DateTime? soldAt;
 
+  @HiveField(16)
+  String? buyerId;
+
   PetModel({
     required this.id,
     required this.name,
@@ -69,6 +72,7 @@ class PetModel extends HiveObject {
     this.buyerContact,
     this.buyerAddress,
     this.soldAt,
+    this.buyerId,
   }) : createdAt = createdAt ?? DateTime.now();
 
   Map<String, dynamic> toJson() {
@@ -89,6 +93,7 @@ class PetModel extends HiveObject {
       'buyerContact': buyerContact,
       'buyerAddress': buyerAddress,
       'soldAt': soldAt?.toIso8601String(),
+      'buyerId': buyerId,
     };
   }
 
@@ -110,6 +115,7 @@ class PetModel extends HiveObject {
       buyerContact: json['buyerContact'] as String?,
       buyerAddress: json['buyerAddress'] as String?,
       soldAt: json['soldAt'] != null ? DateTime.parse(json['soldAt'] as String) : null,
+      buyerId: json['buyerId'] as String?,
     );
   }
 }
