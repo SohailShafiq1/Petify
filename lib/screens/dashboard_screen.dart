@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 import '../providers/auth_provider.dart';
 import '../providers/pets_provider.dart';
 import '../models/category_model.dart';
@@ -17,6 +19,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
   String _searchQuery = '';
   Timer? _searchDebounce;
 
@@ -36,6 +39,140 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _searchController.dispose();
     _searchDebounce?.cancel();
     super.dispose();
+  }
+
+  Future<void> _captureAndSearchByCamera() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1800,
+        maxHeight: 1800,
+        imageQuality: 85,
+      );
+
+      if (image != null && mounted) {
+        // Show a dialog to identify the pet from the photo
+        _showCameraPhotoDialog(image);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error accessing camera: $e')),
+      );
+    }
+  }
+
+  void _showCameraPhotoDialog(XFile image) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Search by Photo',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 12),
+                // Display the captured image
+                Container(
+                  width: double.infinity,
+                  height: 250,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.grey.shade200,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.file(
+                      File(image.path),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'What type of pet are you looking for?',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
+                ),
+                const SizedBox(height: 12),
+                // Quick category buttons
+                Wrap(
+                  spacing: 8,
+                  children: ['Dog', 'Cat', 'Bird', 'Fish', 'Rabbit', 'Hamster']
+                      .map((category) => ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue.shade700,
+                              foregroundColor: Colors.white,
+                            ),
+                            onPressed: () {
+                              _searchController.text = category;
+                              setState(() {
+                                _searchQuery = category;
+                              });
+                              _searchDebounce?.cancel();
+                              _searchDebounce = Timer(
+                                const Duration(milliseconds: 350),
+                                () {
+                                  context.read<PetsProvider>().searchPets(category);
+                                },
+                              );
+                              Navigator.pop(context);
+                            },
+                            child: Text(category),
+                          ))
+                      .toList(),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Or type pet name or description...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  onChanged: (value) {
+                    if (value.trim().isNotEmpty) {
+                      _searchController.text = value;
+                      setState(() {
+                        _searchQuery = value;
+                      });
+                      _searchDebounce?.cancel();
+                      _searchDebounce = Timer(
+                        const Duration(milliseconds: 350),
+                        () {
+                          context.read<PetsProvider>().searchPets(value);
+                        },
+                      );
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue.shade700,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Close'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -212,51 +349,81 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                     ),
                     const SizedBox(height: 20),
-                    // Search Bar
-                    TextField(
-                      controller: _searchController,
-                      onChanged: (value) {
-                        setState(() {
-                          _searchQuery = value;
-                        });
-                        _searchDebounce?.cancel();
-                        if (value.trim().isEmpty) {
-                          petsProvider.clearSearch();
-                          setState(() {
-                            _searchQuery = '';
-                          });
-                          return;
-                        }
-                        _searchDebounce = Timer(const Duration(milliseconds: 350), () {
-                          petsProvider.searchPets(value);
-                        });
-                      },
-                      decoration: InputDecoration(
-                        hintText: 'Search pets by name or category...',
-                        hintStyle: TextStyle(color: Colors.grey.shade600),
-                        filled: true,
-                        fillColor: Colors.white,
-                        prefixIcon: Icon(Icons.search, color: Colors.blue.shade700),
-                        suffixIcon: _searchQuery.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear),
-                                onPressed: () {
-                                  setState(() {
-                                    _searchController.clear();
-                                    _searchQuery = '';
-                                  });
-                                },
-                              )
-                            : null,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(30),
-                          borderSide: BorderSide.none,
+                    // Search Bar with Camera Button
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            onChanged: (value) {
+                              setState(() {
+                                _searchQuery = value;
+                              });
+                              _searchDebounce?.cancel();
+                              if (value.trim().isEmpty) {
+                                context.read<PetsProvider>().clearSearch();
+                                setState(() {
+                                  _searchQuery = '';
+                                });
+                                return;
+                              }
+                              _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+                                context.read<PetsProvider>().searchPets(value);
+                              });
+                            },
+                            decoration: InputDecoration(
+                              hintText: 'Search pets by name or category...',
+                              hintStyle: TextStyle(color: Colors.grey.shade600),
+                              filled: true,
+                              fillColor: Colors.white,
+                              prefixIcon: Icon(Icons.search, color: Colors.blue.shade700),
+                              suffixIcon: _searchQuery.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear),
+                                      onPressed: () {
+                                        setState(() {
+                                          _searchController.clear();
+                                          _searchQuery = '';
+                                        });
+                                      },
+                                    )
+                                  : null,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(30),
+                                borderSide: BorderSide.none,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 16,
+                              ),
+                            ),
+                          ),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 16,
+                        const SizedBox(width: 12),
+                        // Camera Button
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.camera_alt,
+                              color: Colors.blue.shade700,
+                              size: 24,
+                            ),
+                            onPressed: _captureAndSearchByCamera,
+                            tooltip: 'Search by camera',
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ],
                 ),
