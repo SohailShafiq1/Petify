@@ -33,13 +33,16 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
       buyerContact: fields[13] as String?,
       buyerAddress: fields[14] as String?,
       soldAt: fields[15] as DateTime?,
+      buyerId: fields[16] as String?,
+      deliveryStatus: fields[17] as String?,
+      deliveredAt: fields[18] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, PetModel obj) {
     writer
-      ..writeByte(16)
+      ..writeByte(19)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -71,7 +74,13 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
       ..writeByte(14)
       ..write(obj.buyerAddress)
       ..writeByte(15)
-      ..write(obj.soldAt);
+      ..write(obj.soldAt)
+      ..writeByte(16)
+      ..write(obj.buyerId)
+      ..writeByte(17)
+      ..write(obj.deliveryStatus)
+      ..writeByte(18)
+      ..write(obj.deliveredAt);
   }
 
   @override
