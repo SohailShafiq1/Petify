@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'services/local_storage_service.dart';
 import 'providers/auth_provider.dart';
@@ -26,13 +27,20 @@ void main() async {
   runApp(PetifyApp(storageService: storageService));
 }
 
-class PetifyApp extends StatelessWidget {
+class PetifyApp extends StatefulWidget {
   final LocalStorageService storageService;
 
   const PetifyApp({
     super.key,
     required this.storageService,
   });
+
+  @override
+  State<PetifyApp> createState() => _PetifyAppState();
+}
+
+class _PetifyAppState extends State<PetifyApp> {
+  GoRouter? _router;
 
   @override
   Widget build(BuildContext context) {
@@ -42,10 +50,10 @@ class PetifyApp extends StatelessWidget {
           create: (_) => ThemeProvider(),
         ),
         ChangeNotifierProvider(
-          create: (_) => AuthProvider(storageService),
+          create: (_) => AuthProvider(widget.storageService),
         ),
         ChangeNotifierProvider(
-          create: (_) => PetsProvider(storageService),
+          create: (_) => PetsProvider(widget.storageService),
         ),
         ChangeNotifierProxyProvider<AuthProvider, ChatProvider>(
           create: (context) => ChatProvider(context.read<AuthProvider>()),
@@ -53,102 +61,107 @@ class PetifyApp extends StatelessWidget {
               chatProvider!..updateAuth(authProvider),
         ),
         ChangeNotifierProvider(
-          create: (_) => ProfileProvider(storageService),
+          create: (_) => ProfileProvider(widget.storageService),
         ),
         ChangeNotifierProvider(
           create: (_) => OrdersProvider(),
         ),
       ],
-      child: Consumer2<AuthProvider, ThemeProvider>(
-        builder: (context, authProvider, themeProvider, _) {
-          final router = AppRouter(authProvider).router;
+      child: Builder(
+        builder: (context) {
+          final authProvider = context.read<AuthProvider>();
+          _router ??= AppRouter(authProvider).router;
 
-          return MaterialApp.router(
-            title: 'PetiFy',
-            debugShowCheckedModeBanner: false,
-            themeMode: themeProvider.themeMode,
-            theme: ThemeData(
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: Colors.blue.shade700,
-                primary: Colors.blue.shade700,
-              ),
-              useMaterial3: true,
-              appBarTheme: AppBarTheme(
-                centerTitle: true,
-                elevation: 0,
-                backgroundColor: Colors.blue.shade700,
-                foregroundColor: Colors.white,
-              ),
-              cardTheme: CardThemeData(
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              elevatedButtonTheme: ElevatedButtonThemeData(
-                style: ElevatedButton.styleFrom(
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
+          return Consumer<ThemeProvider>(
+            builder: (context, themeProvider, _) {
+              return MaterialApp.router(
+                title: 'PetiFy',
+                debugShowCheckedModeBanner: false,
+                themeMode: themeProvider.themeMode,
+                theme: ThemeData(
+                  colorScheme: ColorScheme.fromSeed(
+                    seedColor: Colors.blue.shade700,
+                    primary: Colors.blue.shade700,
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                  useMaterial3: true,
+                  appBarTheme: AppBarTheme(
+                    centerTitle: true,
+                    elevation: 0,
+                    backgroundColor: Colors.blue.shade700,
+                    foregroundColor: Colors.white,
                   ),
-                ),
-              ),
-              inputDecorationTheme: InputDecorationTheme(
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 16,
-                ),
-              ),
-            ),
-            darkTheme: ThemeData(
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: Colors.blue.shade700,
-                primary: Colors.blue.shade700,
-                brightness: Brightness.dark,
-              ),
-              useMaterial3: true,
-              appBarTheme: AppBarTheme(
-                centerTitle: true,
-                elevation: 0,
-                backgroundColor: Colors.blue.shade700,
-                foregroundColor: Colors.white,
-              ),
-              cardTheme: CardThemeData(
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              elevatedButtonTheme: ElevatedButtonThemeData(
-                style: ElevatedButton.styleFrom(
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
+                  cardTheme: CardThemeData(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                  elevatedButtonTheme: ElevatedButtonThemeData(
+                    style: ElevatedButton.styleFrom(
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  inputDecorationTheme: InputDecorationTheme(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
+                    ),
                   ),
                 ),
-              ),
-              inputDecorationTheme: InputDecorationTheme(
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                darkTheme: ThemeData(
+                  colorScheme: ColorScheme.fromSeed(
+                    seedColor: Colors.blue.shade700,
+                    primary: Colors.blue.shade700,
+                    brightness: Brightness.dark,
+                  ),
+                  useMaterial3: true,
+                  appBarTheme: AppBarTheme(
+                    centerTitle: true,
+                    elevation: 0,
+                    backgroundColor: Colors.blue.shade700,
+                    foregroundColor: Colors.white,
+                  ),
+                  cardTheme: CardThemeData(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  elevatedButtonTheme: ElevatedButtonThemeData(
+                    style: ElevatedButton.styleFrom(
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  inputDecorationTheme: InputDecorationTheme(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
+                    ),
+                  ),
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 16,
-                ),
-              ),
-            ),
-            routerConfig: router,
+                routerConfig: _router!,
+              );
+            },
           );
         },
       ),

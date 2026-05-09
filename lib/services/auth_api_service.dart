@@ -4,6 +4,23 @@ import 'dart:io';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
+class ApiException implements Exception {
+  ApiException({
+    required this.statusCode,
+    required this.message,
+    this.field,
+    this.fieldErrors,
+  });
+
+  final int statusCode;
+  final String message;
+  final String? field;
+  final Map<String, String>? fieldErrors;
+
+  @override
+  String toString() => 'ApiException: $message';
+}
+
 class AuthApiService {
   String get _baseUrl {
     final configured = dotenv.env['API_BASE_URL']?.trim();
@@ -95,6 +112,21 @@ class AuthApiService {
     }
 
     final message = body['message'] as String? ?? 'Request failed';
-    throw Exception(message);
+    final field = body['field'] as String?;
+    final fieldErrorsJson = body['fieldErrors'];
+    Map<String, String>? fieldErrors;
+
+    if (fieldErrorsJson is Map) {
+      fieldErrors = fieldErrorsJson.map(
+        (key, value) => MapEntry(key.toString(), value.toString()),
+      );
+    }
+
+    throw ApiException(
+      statusCode: response.statusCode,
+      message: message,
+      field: field,
+      fieldErrors: fieldErrors,
+    );
   }
 }

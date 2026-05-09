@@ -9,6 +9,8 @@ class AuthProvider extends ChangeNotifier {
   UserModel? _currentUser;
   bool _isLoading = false;
   String? _errorMessage;
+  String? _emailError;
+  String? _passwordError;
 
   AuthProvider(this._storageService) {
     _loadCurrentUser();
@@ -17,6 +19,8 @@ class AuthProvider extends ChangeNotifier {
   UserModel? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  String? get emailError => _emailError;
+  String? get passwordError => _passwordError;
   bool get isAuthenticated => _currentUser != null && _storageService.getAuthToken() != null;
   String? get authToken => _storageService.getAuthToken();
 
@@ -45,6 +49,8 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> login(String email, String password) async {
     _isLoading = true;
     _errorMessage = null;
+    _emailError = null;
+    _passwordError = null;
     notifyListeners();
 
     try {
@@ -64,11 +70,47 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return true;
+    } on ApiException catch (e) {
+      if (e.field != null) {
+        if (e.field == 'email') {
+          _emailError = e.message;
+        } else if (e.field == 'password') {
+          _passwordError = e.message;
+        }
+      }
+
+      if (e.fieldErrors != null) {
+        _emailError = e.fieldErrors!['email'] ?? _emailError;
+        _passwordError = e.fieldErrors!['password'] ?? _passwordError;
+      }
+
+      if (_emailError == null && _passwordError == null) {
+        _setLoginFieldFallback(e.message);
+      }
+
+      if (_emailError == null && _passwordError == null) {
+        _errorMessage = e.message;
+      }
+
+      _isLoading = false;
+      notifyListeners();
+      return false;
     } catch (e) {
       _errorMessage = e.toString().replaceFirst('Exception: ', '');
       _isLoading = false;
       notifyListeners();
       return false;
+    }
+  }
+
+  void _setLoginFieldFallback(String message) {
+    final text = message.toLowerCase();
+    if (text.contains('email')) {
+      _emailError = 'Email not found or incorrect';
+    } else if (text.contains('password')) {
+      _passwordError = 'Password is incorrect';
+    } else if (text.contains('credential') || text.contains('invalid')) {
+      _passwordError = 'Email or password is incorrect';
     }
   }
 
@@ -116,6 +158,20 @@ class AuthProvider extends ChangeNotifier {
 
   void clearError() {
     _errorMessage = null;
+    _emailError = null;
+    _passwordError = null;
+    notifyListeners();
+  }
+
+  void clearEmailError() {
+    _errorMessage = null;
+    _emailError = null;
+    notifyListeners();
+  }
+
+  void clearPasswordError() {
+    _errorMessage = null;
+    _passwordError = null;
     notifyListeners();
   }
 
