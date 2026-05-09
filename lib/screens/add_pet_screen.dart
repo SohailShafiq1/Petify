@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import '../models/pet_model.dart';
 import '../models/category_model.dart';
 import '../providers/auth_provider.dart';
 import '../providers/pets_provider.dart';
+import '../input_formatters/pakistan_mobile_suffix_formatter.dart';
 
 class AddPetScreen extends StatefulWidget {
   const AddPetScreen({super.key});
@@ -117,7 +117,9 @@ class _AddPetScreenState extends State<AddPetScreen> {
       age: int.parse(_ageController.text.trim()),
       description: _descriptionController.text.trim(),
       price: double.parse(_priceController.text.trim()),
-      ownerContact: _ownerContactController.text.trim(),
+      ownerContact: PakistanMobileSuffixFormatter.toFullPakNumber(
+        _ownerContactController.text,
+      ),
       imagePath: _imagePath,
     );
 
@@ -316,21 +318,38 @@ class _AddPetScreenState extends State<AddPetScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Owner Contact
+              // Owner Contact (Pakistan mobile: fixed 03 + XX-XXXXXXX)
               TextFormField(
                 controller: _ownerContactController,
                 keyboardType: TextInputType.phone,
+                inputFormatters: [
+                  PakistanMobileSuffixFormatter(),
+                ],
                 decoration: InputDecoration(
                   labelText: 'Contact Number',
-                  hintText: 'Enter your contact number',
+                  hintText: '40-8432739',
+                  helperText: 'Pakistan mobile — 03 is fixed, enter 9 more digits',
                   prefixIcon: const Icon(Icons.phone),
+                  prefixText: '03 ',
+                  prefixStyle:
+                      Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter contact number';
+                    return 'Please enter your mobile number';
+                  }
+                  final digits =
+                      PakistanMobileSuffixFormatter.normalizeSuffixDigits(
+                    value,
+                  );
+                  if (digits.length !=
+                      PakistanMobileSuffixFormatter.maxDigitsAfterPrefix) {
+                    return 'Enter a complete number (9 digits after 03)';
                   }
                   return null;
                 },

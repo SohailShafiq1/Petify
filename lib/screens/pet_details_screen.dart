@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../models/pet_model.dart';
 import '../providers/auth_provider.dart';
 import '../providers/pets_provider.dart';
+import '../input_formatters/pakistan_mobile_suffix_formatter.dart';
 
 class PetDetailsScreen extends StatelessWidget {
   final String petId;
@@ -427,14 +428,35 @@ class PetDetailsScreen extends StatelessWidget {
                                         const SizedBox(height: 12),
                                         TextFormField(
                                           controller: contactController,
-                                          decoration: const InputDecoration(
-                                            labelText: 'Contact number',
-                                          ),
                                           keyboardType: TextInputType.phone,
                                           textInputAction: TextInputAction.next,
+                                          inputFormatters: [
+                                            PakistanMobileSuffixFormatter(),
+                                          ],
+                                          decoration: InputDecoration(
+                                            labelText: 'Contact number',
+                                            hintText: '40-8432739',
+                                            helperText:
+                                                'Pakistan mobile — 03 is fixed, 9 digits',
+                                            prefixIcon: const Icon(Icons.phone_outlined),
+                                            prefixText: '03 ',
+                                            prefixStyle:
+                                                Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                                      fontWeight: FontWeight.w600,
+                                                    ),
+                                            isDense: true,
+                                          ),
                                           validator: (value) {
                                             if (value == null || value.trim().isEmpty) {
                                               return 'Contact number is required';
+                                            }
+                                            final digits =
+                                                PakistanMobileSuffixFormatter
+                                                    .normalizeSuffixDigits(value);
+                                            if (digits.length !=
+                                                PakistanMobileSuffixFormatter
+                                                    .maxDigitsAfterPrefix) {
+                                              return 'Enter complete number (9 digits after 03)';
                                             }
                                             return null;
                                           },
@@ -487,7 +509,10 @@ class PetDetailsScreen extends StatelessWidget {
                             token: token,
                             petId: pet.id,
                             buyerName: nameController.text.trim(),
-                            buyerContact: contactController.text.trim(),
+                            buyerContact:
+                                PakistanMobileSuffixFormatter.toFullPakNumber(
+                              contactController.text,
+                            ),
                             buyerAddress: addressController.text.trim(),
                           );
 
