@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../services/local_storage_service.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -61,7 +62,15 @@ class WelcomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 64),
                 ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
+                    final userId =
+                        context.read<AuthProvider>().currentUser?.id ??
+                            LocalStorageService().getCurrentUserId();
+                    if (userId != null && userId.isNotEmpty) {
+                      await LocalStorageService()
+                          .setWelcomeTourCompletedForUser(userId);
+                    }
+                    if (!context.mounted) return;
                     context.go('/dashboard');
                   },
                   style: ElevatedButton.styleFrom(

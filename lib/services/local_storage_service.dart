@@ -10,6 +10,7 @@ class LocalStorageService {
   static const String _chatsBoxName = 'chats';
   static const String _currentUserIdKey = 'currentUserId';
   static const String _authTokenKey = 'authToken';
+  static const String _welcomeTourUserPrefix = 'welcome_tour_done_';
 
   late Box<UserModel> _usersBox;
   late Box<PetModel> _petsBox;
@@ -231,6 +232,17 @@ class LocalStorageService {
 
   String? getAuthToken() {
     return _prefs.getString(_authTokenKey);
+  }
+
+  /// Whether [userId] has already completed the onboarding / Get Started screen.
+  bool hasCompletedWelcomeTour(String userId) {
+    if (userId.isEmpty) return false;
+    return _prefs.getBool('$_welcomeTourUserPrefix$userId') ?? false;
+  }
+
+  Future<void> setWelcomeTourCompletedForUser(String userId) async {
+    if (userId.isEmpty) return;
+    await _prefs.setBool('$_welcomeTourUserPrefix$userId', true);
   }
 
   UserModel? getCurrentUser() {

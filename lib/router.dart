@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'providers/auth_provider.dart';
+import 'services/local_storage_service.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/signup_screen.dart';
 import 'screens/welcome_screen.dart';
@@ -21,8 +22,9 @@ import 'screens/favorites_screen.dart';
 
 class AppRouter {
   final AuthProvider authProvider;
+  final LocalStorageService _storage;
 
-  AppRouter(this.authProvider);
+  AppRouter(this.authProvider, this._storage);
 
   late final GoRouter router = GoRouter(
     initialLocation: '/login',
@@ -32,14 +34,31 @@ class AppRouter {
       final isLoggingIn = state.matchedLocation == '/login' ||
           state.matchedLocation == '/signup';
 
+      final userId = authProvider.currentUser?.id ?? _storage.getCurrentUserId() ?? '';
+      final welcomeDone =
+          userId.isNotEmpty && _storage.hasCompletedWelcomeTour(userId);
+
       // If not authenticated and not on login/signup, redirect to login
       if (!isAuthenticated && !isLoggingIn) {
         return '/login';
       }
 
-      // If authenticated and on login/signup, redirect to welcome
+      // Returning user: dashboard. New user this account: welcome.
       if (isAuthenticated && isLoggingIn) {
+        return welcomeDone ? '/dashboard' : '/welcome';
+      }
+
+      // First session for this user — keep them on Get Started until completed
+      if (isAuthenticated &&
+          !welcomeDone &&
+          state.matchedLocation != '/welcome') {
         return '/welcome';
+      }
+
+      if (isAuthenticated &&
+          welcomeDone &&
+          state.matchedLocation == '/welcome') {
+        return '/dashboard';
       }
 
       return null;

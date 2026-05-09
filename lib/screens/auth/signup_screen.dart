@@ -44,7 +44,7 @@ class _SignupScreenState extends State<SignupScreen> {
     if (!mounted) return;
 
     if (success) {
-      context.go('/welcome');
+      context.go('/dashboard');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

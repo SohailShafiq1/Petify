@@ -70,7 +70,7 @@ class _PetifyAppState extends State<PetifyApp> {
       child: Builder(
         builder: (context) {
           final authProvider = context.read<AuthProvider>();
-          _router ??= AppRouter(authProvider).router;
+          _router ??= AppRouter(authProvider, widget.storageService).router;
 
           return Consumer<ThemeProvider>(
             builder: (context, themeProvider, _) {
