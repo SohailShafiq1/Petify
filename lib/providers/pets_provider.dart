@@ -312,4 +312,24 @@ class PetsProvider extends ChangeNotifier {
       return false;
     }
   }
+
+  Future<bool> deletePet({
+    required String token,
+    required String petId,
+  }) async {
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _petApiService.deletePet(token: token, petId: petId);
+      await loadPets();
+      await loadMyPets(token);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
 }

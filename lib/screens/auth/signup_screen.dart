@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter/services.dart';
 import '../../providers/auth_provider.dart';
+import '../../utils/password_validator.dart';
+import '../../input_formatters/pakistan_mobile_suffix_formatter.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -38,7 +41,9 @@ class _SignupScreenState extends State<SignupScreen> {
       name: _nameController.text.trim(),
       email: _emailController.text.trim(),
       password: _passwordController.text,
-      phone: _phoneController.text.trim(),
+      phone: PakistanMobileSuffixFormatter.toFullPakNumber(
+        _phoneController.text,
+      ),
     );
 
     if (!mounted) return;
@@ -137,10 +142,19 @@ class _SignupScreenState extends State<SignupScreen> {
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
+                  inputFormatters: [
+                    PakistanMobileSuffixFormatter(),
+                  ],
                   decoration: InputDecoration(
                     labelText: 'Phone Number',
-                    hintText: 'Enter your phone number',
+                    hintText: '40-8432739',
+                    helperText: 'Used Pakistan mobile format',
                     prefixIcon: const Icon(Icons.phone_outlined),
+                    prefixText: '03 ',
+                    prefixStyle:
+                        Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -148,6 +162,14 @@ class _SignupScreenState extends State<SignupScreen> {
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your phone number';
+                    }
+                    final digits =
+                        PakistanMobileSuffixFormatter.normalizeSuffixDigits(
+                      value,
+                    );
+                    if (digits.length !=
+                        PakistanMobileSuffixFormatter.maxDigitsAfterPrefix) {
+                      return 'Enter a complete number (9 digits after 03)';
                     }
                     return null;
                   },
@@ -157,9 +179,12 @@ class _SignupScreenState extends State<SignupScreen> {
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
+                  onChanged: (value) {
+                    setState(() {});
+                  },
                   decoration: InputDecoration(
                     labelText: 'Password',
-                    hintText: 'Enter your password',
+                    hintText: 'Create a strong password',
                     prefixIcon: const Icon(Icons.lock_outlined),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -176,17 +201,24 @@ class _SignupScreenState extends State<SignupScreen> {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
+                    helperText:
+                        'Requirements: 8+ chars, 1 UPPERCASE, 1 number, 1 special char (!@#\$%^&*)',
+                    helperMaxLines: 3,
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your password';
                     }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
+                    if (!PasswordValidator.isStrong(value)) {
+                      return PasswordValidator.getErrorMessage(value);
                     }
                     return null;
                   },
                 ),
+                const SizedBox(height: 8),
+                // Password strength indicator
+                if (_passwordController.text.isNotEmpty)
+                  _buildPasswordStrengthIndicator(_passwordController.text),
                 const SizedBox(height: 16),
                 // Confirm Password field
                 TextFormField(
@@ -281,6 +313,146 @@ class _SignupScreenState extends State<SignupScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildPasswordStrengthIndicator(String password) {
+    final isStrong = PasswordValidator.isStrong(password);
+    final errors = PasswordValidator.getValidationErrors(password);
+
+    // Check individual requirements
+    final hasMinLength = password.length >= 8;
+    final hasUppercase = RegExp(r'[A-Z]').hasMatch(password);
+    final hasNumber = RegExp(r'[0-9]').hasMatch(password);
+    final hasSpecial =
+        RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isStrong
+            ? Colors.green.withOpacity(0.08)
+            : Colors.blue.withOpacity(0.08),
+        border: Border.all(
+          color: isStrong ? Colors.green : Colors.blue.shade300,
+          width: 1.5,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Status header
+          Row(
+            children: [
+              Icon(
+                isStrong ? Icons.shield_sharp : Icons.info_outline,
+                color: isStrong ? Colors.green : Colors.blue.shade700,
+                size: 22,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  isStrong ? 'Strong Password ✓' : 'Password Requirements:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: isStrong ? Colors.green : Colors.blue.shade700,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Requirements list
+          _buildRequirementRow(
+            icon: hasMinLength ? Icons.check_circle : Icons.radio_button_unchecked,
+            text: 'Minimum 8 characters',
+            isMet: hasMinLength,
+          ),
+          const SizedBox(height: 8),
+          _buildRequirementRow(
+            icon: hasUppercase ? Icons.check_circle : Icons.radio_button_unchecked,
+            text: 'At least one UPPERCASE letter (A-Z)',
+            isMet: hasUppercase,
+          ),
+          const SizedBox(height: 8),
+          _buildRequirementRow(
+            icon: hasNumber ? Icons.check_circle : Icons.radio_button_unchecked,
+            text: 'At least one number (0-9)',
+            isMet: hasNumber,
+          ),
+          const SizedBox(height: 8),
+          _buildRequirementRow(
+            icon: hasSpecial ? Icons.check_circle : Icons.radio_button_unchecked,
+            text: 'At least one special character (!@#\$%^&*)',
+            isMet: hasSpecial,
+          ),
+
+          // Example password
+          if (!isStrong) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Example strong password:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'MyPassword123!',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontFamily: 'monospace',
+                      color: Colors.green.shade700,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRequirementRow({
+    required IconData icon,
+    required String text,
+    required bool isMet,
+  }) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 18,
+          color: isMet ? Colors.green : Colors.grey.shade400,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 13,
+              color: isMet ? Colors.green.shade700 : Colors.grey.shade600,
+              fontWeight: isMet ? FontWeight.w600 : FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

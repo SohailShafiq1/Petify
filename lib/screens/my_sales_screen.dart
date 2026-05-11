@@ -311,6 +311,66 @@ class _MySalesScreenState extends State<MySalesScreen> {
                   label: const Text('Mark Delivery Completed'),
                 ),
               ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    final token = context.read<AuthProvider>().authToken;
+                    if (token == null || token.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Please log in again.')),
+                      );
+                      return;
+                    }
+
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (context) {
+                        return AlertDialog(
+                          title: const Text('Delete Sale'),
+                          content: Text('Are you sure you want to delete this sale record for ${pet.name}?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(false),
+                              child: const Text('Cancel'),
+                            ),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                              onPressed: () => Navigator.of(context).pop(true),
+                              child: const Text('Delete', style: TextStyle(color: Colors.white)),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+
+                    if (confirmed != true) return;
+
+                    final success = await petsProvider.deletePet(
+                      token: token,
+                      petId: pet.id,
+                    );
+
+                    if (!context.mounted) return;
+
+                    if (success) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Sale record deleted.')),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(petsProvider.errorMessage ?? 'Delete failed.')),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Delete'),
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                  ),
+                ),
+              ),
              ],
            ),
          ),

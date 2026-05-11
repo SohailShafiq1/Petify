@@ -437,7 +437,7 @@ class PetDetailsScreen extends StatelessWidget {
                                             labelText: 'Contact number',
                                             hintText: '40-8432739',
                                             helperText:
-                                                'Pakistan mobile — 03 is fixed, 9 digits',
+                                                'Used Pakistan locak format',
                                             prefixIcon: const Icon(Icons.phone_outlined),
                                             prefixText: '03 ',
                                             prefixStyle:

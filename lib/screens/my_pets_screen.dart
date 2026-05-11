@@ -322,11 +322,31 @@ class _MyPetsScreenState extends State<MyPetsScreen> with SingleTickerProviderSt
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('${pet.name} deleted')),
-              );
+              final authProvider = context.read<AuthProvider>();
+              final token = authProvider.authToken;
+              
+              if (token != null && token.isNotEmpty) {
+                final petsProvider = context.read<PetsProvider>();
+                final success = await petsProvider.deletePet(
+                  token: token,
+                  petId: pet.id,
+                );
+                
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('${pet.name} deleted successfully')),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(petsProvider.errorMessage ?? 'Failed to delete pet'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
             child: const Text(
               'Delete',
