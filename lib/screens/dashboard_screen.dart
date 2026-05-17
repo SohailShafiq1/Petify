@@ -256,14 +256,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             onPressed: () {
               Navigator.pop(context);
-              // Search for this pet type
-              _searchController.text = petDetails['petName'] ?? '';
+              final breed = (petDetails['breed'] ?? '').toString().trim();
+              final petType = (petDetails['petName'] ?? '').toString().trim();
+              final searchTerm = breed.isNotEmpty &&
+                      breed.toLowerCase() != 'unknown'
+                  ? breed
+                  : petType;
+
+              // Search for breed first, then pet type if breed is unknown
+              _searchController.text = searchTerm;
               setState(() {
-                _searchQuery = petDetails['petName'] ?? '';
+                _searchQuery = searchTerm;
               });
-              context.read<PetsProvider>().searchPets(
-                    petDetails['petName'] ?? '',
-                  );
+              context.read<PetsProvider>().searchPets(searchTerm);
             },
             child: const Text('Search Similar Pets'),
           ),

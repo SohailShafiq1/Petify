@@ -87,7 +87,7 @@ class PetAnalysisService {
   Future<List<dynamic>> searchPets(String query) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/pets/search?q=$query'),
+        Uri.parse('$baseUrl/api/pets/search?q=${Uri.encodeQueryComponent(query)}'),
       ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
