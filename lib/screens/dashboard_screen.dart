@@ -9,6 +9,7 @@ import '../providers/pets_provider.dart';
 import '../models/category_model.dart';
 import '../widgets/pet_card.dart';
 import '../widgets/category_card.dart';
+import '../services/pet_analysis_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -20,8 +21,10 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final TextEditingController _searchController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
+  final PetAnalysisService _analysisService = PetAnalysisService();
   String _searchQuery = '';
   Timer? _searchDebounce;
+  bool _isAnalyzing = false;
 
   @override
   void initState() {
@@ -51,8 +54,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
 
       if (image != null && mounted) {
-        // Show a dialog to identify the pet from the photo
-        _showCameraPhotoDialog(image);
+        _showPetAnalysisDialog(image);
       }
     } catch (e) {
       if (!mounted) return;
@@ -62,24 +64,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  void _showCameraPhotoDialog(XFile image) {
+  Future<void> _pickFromGallery() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1800,
+        maxHeight: 1800,
+        imageQuality: 85,
+      );
+
+      if (image != null && mounted) {
+        _showPetAnalysisDialog(image);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error accessing gallery: $e')),
+      );
+    }
+  }
+
+  void _showPetAnalysisDialog(XFile image) {
     showModalBottomSheet(
       context: context,
+      isDismissible: !_isAnalyzing,
       builder: (context) => SafeArea(
         child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  'Search by Photo',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                // Close button
+                Align(
+                  alignment: Alignment.topRight,
+                  child: _isAnalyzing
+                      ? const SizedBox.shrink()
+                      : IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                        ),
                 ),
-                const SizedBox(height: 12),
-                // Display the captured image
+                // Image Preview
                 Container(
                   width: double.infinity,
                   height: 250,
@@ -95,82 +122,191 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  'What type of pet are you looking for?',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
+                const SizedBox(height: 20),
+                // Analyze Button or Loading
+                if (_isAnalyzing)
+                  Center(
+                    child: Column(
+                      children: [
+                        const CircularProgressIndicator(),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Analyzing pet image...',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue.shade700,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                ),
-                const SizedBox(height: 12),
-                // Quick category buttons
-                Wrap(
-                  spacing: 8,
-                  children: ['Dog', 'Cat', 'Bird', 'Fish', 'Rabbit', 'Hamster']
-                      .map((category) => ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue.shade700,
-                              foregroundColor: Colors.white,
-                            ),
-                            onPressed: () {
-                              _searchController.text = category;
-                              setState(() {
-                                _searchQuery = category;
-                              });
-                              _searchDebounce?.cancel();
-                              _searchDebounce = Timer(
-                                const Duration(milliseconds: 350),
-                                () {
-                                  context.read<PetsProvider>().searchPets(category);
-                                },
-                              );
-                              Navigator.pop(context);
-                            },
-                            child: Text(category),
-                          ))
-                      .toList(),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Or type pet name or description...',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      icon: const Icon(Icons.auto_awesome),
+                      label: const Text('🔍 Analyze Pet with AI'),
+                      onPressed: () => _analyzePetImage(File(image.path), context),
                     ),
                   ),
-                  onChanged: (value) {
-                    if (value.trim().isNotEmpty) {
-                      _searchController.text = value;
-                      setState(() {
-                        _searchQuery = value;
-                      });
-                      _searchDebounce?.cancel();
-                      _searchDebounce = Timer(
-                        const Duration(milliseconds: 350),
-                        () {
-                          context.read<PetsProvider>().searchPets(value);
-                        },
-                      );
-                    }
-                  },
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue.shade700,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Close'),
-                  ),
-                ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Future<void> _analyzePetImage(File imageFile, BuildContext context) async {
+    if (!mounted) return;
+
+    setState(() {
+      _isAnalyzing = true;
+    });
+
+    try {
+      final result = await _analysisService.analyzePetImage(imageFile);
+
+      if (!mounted) return;
+
+      if (result['success'] == true) {
+        // Close modal first, then show results
+        if (mounted) Navigator.pop(context);
+        if (mounted) _showAnalysisResults(result, context);
+      } else {
+        // Show error and close modal
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: ${result['error']}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      // Close modal and show error
+      Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error analyzing image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isAnalyzing = false;
+        });
+      }
+    }
+  }
+
+  void _showAnalysisResults(
+      Map<String, dynamic> petDetails, BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('🐾 Pet Analysis Results'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildDetailRow(
+                'Pet Type:',
+                petDetails['petName'] ?? 'Unknown',
+              ),
+              const SizedBox(height: 12),
+              _buildDetailRow(
+                'Breed:',
+                petDetails['breed'] ?? 'Unknown',
+              ),
+              const SizedBox(height: 12),
+              _buildDetailRow(
+                'Estimated Age:',
+                petDetails['expectedAge'] ?? 'Unknown',
+              ),
+              const SizedBox(height: 12),
+              _buildDetailRow(
+                'Origin:',
+                petDetails['origin'] ?? 'Unknown',
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue.shade700,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+              // Search for this pet type
+              _searchController.text = petDetails['petName'] ?? '';
+              setState(() {
+                _searchQuery = petDetails['petName'] ?? '';
+              });
+              context.read<PetsProvider>().searchPets(
+                    petDetails['petName'] ?? '',
+                  );
+            },
+            child: const Text('Search Similar Pets'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border(
+          left: BorderSide(
+            width: 4,
+            color: Colors.blue.shade700,
+          ),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.blue.shade700,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -400,7 +536,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        // Camera Button
+                        // Camera & Gallery Button
                         Container(
                           decoration: BoxDecoration(
                             color: Colors.white,
@@ -413,14 +549,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                             ],
                           ),
-                          child: IconButton(
+                          child: PopupMenuButton<String>(
                             icon: Icon(
                               Icons.camera_alt,
                               color: Colors.blue.shade700,
                               size: 24,
                             ),
-                            onPressed: _captureAndSearchByCamera,
-                            tooltip: 'Search by camera',
+                            tooltip: 'Search by image',
+                            onSelected: (String value) {
+                              if (value == 'camera') {
+                                _captureAndSearchByCamera();
+                              } else if (value == 'gallery') {
+                                _pickFromGallery();
+                              }
+                            },
+                            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                              PopupMenuItem<String>(
+                                value: 'camera',
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.camera_alt, size: 20),
+                                    const SizedBox(width: 12),
+                                    const Text('Take Photo'),
+                                  ],
+                                ),
+                              ),
+                              PopupMenuItem<String>(
+                                value: 'gallery',
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.image, size: 20),
+                                    const SizedBox(width: 12),
+                                    const Text('Upload from Gallery'),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
