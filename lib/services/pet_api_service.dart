@@ -34,6 +34,7 @@ class PetApiService {
     required String token,
     required String name,
     required String category,
+    required String breed,
     required int age,
     required String description,
     required double price,
@@ -52,6 +53,7 @@ class PetApiService {
 
       request.fields['name'] = name;
       request.fields['category'] = category;
+      request.fields['breed'] = breed;
       request.fields['age'] = age.toString();
       request.fields['description'] = description;
       request.fields['price'] = price.toString();

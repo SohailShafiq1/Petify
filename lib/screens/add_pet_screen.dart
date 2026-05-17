@@ -18,6 +18,7 @@ class AddPetScreen extends StatefulWidget {
 class _AddPetScreenState extends State<AddPetScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _breedController = TextEditingController();
   final _ageController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
@@ -28,10 +29,70 @@ class _AddPetScreenState extends State<AddPetScreen> {
   final ImagePicker _picker = ImagePicker();
 
   final categories = CategoryModel.getDummyCategories();
+  static const Map<String, List<String>> _breedSuggestions = {
+    'Dogs': [
+      'German Shepherd',
+      'Labrador Retriever',
+      'Golden Retriever',
+      'Poodle',
+      'Beagle',
+      'Bulldog',
+      'Rottweiler',
+      'Shih Tzu',
+    ],
+    'Cats': [
+      'Persian Cat',
+      'Siamese',
+      'Maine Coon',
+      'British Shorthair',
+      'Ragdoll',
+      'Bengal',
+      'Sphynx',
+      'Scottish Fold',
+    ],
+    'Birds': [
+      'Parakeet',
+      'Cockatiel',
+      'African Grey',
+      'Macaw',
+      'Canary',
+      'Lovebird',
+      'Cockatoo',
+    ],
+    'Fish': [
+      'Goldfish',
+      'Betta Fish',
+      'Guppy',
+      'Angelfish',
+      'Molly',
+      'Tetra',
+    ],
+    'Rabbits': [
+      'Holland Lop',
+      'Netherland Dwarf',
+      'Lionhead',
+      'Flemish Giant',
+      'Mini Rex',
+      'English Angora',
+    ],
+    'Hamsters': [
+      'Syrian Hamster',
+      'Dwarf Hamster',
+      'Roborovski Hamster',
+      'Campbells Dwarf Hamster',
+      'Winter White Hamster',
+    ],
+  };
+
+  List<String> get _currentBreedSuggestions {
+    if (_selectedCategory == null) return const [];
+    return _breedSuggestions[_selectedCategory!] ?? const [];
+  }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _breedController.dispose();
     _ageController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
@@ -114,6 +175,7 @@ class _AddPetScreenState extends State<AddPetScreen> {
       token: token,
       name: _nameController.text.trim(),
       category: _selectedCategory!,
+      breed: _breedController.text.trim(),
       age: int.parse(_ageController.text.trim()),
       description: _descriptionController.text.trim(),
       price: double.parse(_priceController.text.trim()),
@@ -237,6 +299,12 @@ class _AddPetScreenState extends State<AddPetScreen> {
                 onChanged: (value) {
                   setState(() {
                     _selectedCategory = value;
+                    if (_breedController.text.isNotEmpty &&
+                        !_currentBreedSuggestions
+                            .map((breed) => breed.toLowerCase())
+                            .contains(_breedController.text.trim().toLowerCase())) {
+                      _breedController.clear();
+                    }
                   });
                 },
                 validator: (value) {
@@ -247,6 +315,64 @@ class _AddPetScreenState extends State<AddPetScreen> {
                 },
               ),
               const SizedBox(height: 16),
+
+              // Breed
+              TextFormField(
+                controller: _breedController,
+                onChanged: (_) => setState(() {}),
+                textInputAction: TextInputAction.next,
+                decoration: InputDecoration(
+                  labelText: 'Breed',
+                  hintText: _selectedCategory == null
+                      ? 'Select a category first'
+                      : 'Type breed or choose a suggestion',
+                  prefixIcon: const Icon(Icons.fingerprint),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter breed';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 10),
+
+              if (_currentBreedSuggestions.isNotEmpty) ...[
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Suggested breeds for $_selectedCategory',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _currentBreedSuggestions.map((breed) {
+                    final isSelected =
+                        _breedController.text.trim().toLowerCase() == breed.toLowerCase();
+                    return ChoiceChip(
+                      label: Text(breed),
+                      selected: isSelected,
+                      onSelected: (_) {
+                        setState(() {
+                          _breedController.text = breed;
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+              ] else
+                const SizedBox(height: 16),
 
               // Age
               TextFormField(

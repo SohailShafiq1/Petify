@@ -20,45 +20,48 @@ class PetModel extends HiveObject {
   String description;
 
   @HiveField(5)
-  double price;
+  String? breed;
 
   @HiveField(6)
-  String ownerName;
+  double price;
 
   @HiveField(7)
-  String ownerContact;
+  String ownerName;
 
   @HiveField(8)
-  String? imagePath;
+  String ownerContact;
 
   @HiveField(9)
-  String ownerId;
+  String? imagePath;
 
   @HiveField(10)
-  DateTime createdAt;
+  String ownerId;
 
   @HiveField(11)
-  bool isAvailable;
+  DateTime createdAt;
 
   @HiveField(12)
-  String? buyerName;
+  bool isAvailable;
 
   @HiveField(13)
-  String? buyerContact;
+  String? buyerName;
 
   @HiveField(14)
-  String? buyerAddress;
+  String? buyerContact;
 
   @HiveField(15)
-  DateTime? soldAt;
+  String? buyerAddress;
 
   @HiveField(16)
-  String? buyerId;
+  DateTime? soldAt;
 
   @HiveField(17)
-  String? deliveryStatus;
+  String? buyerId;
 
   @HiveField(18)
+  String? deliveryStatus;
+
+  @HiveField(19)
   DateTime? deliveredAt;
 
   PetModel({
@@ -67,6 +70,7 @@ class PetModel extends HiveObject {
     required this.category,
     required this.age,
     required this.description,
+    this.breed,
     required this.price,
     required this.ownerName,
     required this.ownerContact,
@@ -114,6 +118,7 @@ class PetModel extends HiveObject {
       category: json['category'] as String,
       age: json['age'] as int,
       description: json['description'] as String,
+      breed: json['breed'] as String?,
       price: (json['price'] as num).toDouble(),
       ownerName: json['ownerName'] as String,
       ownerContact: json['ownerContact'] as String,
