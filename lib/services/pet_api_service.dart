@@ -327,6 +327,31 @@ class PetApiService {
     }
   }
 
+  Future<Map<String, dynamic>> addReview({
+    required String token,
+    required String petId,
+    required int rating,
+    required String comment,
+  }) async {
+    try {
+      final response = await http.post(
+        _uri('/api/pets/$petId/reviews'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'rating': rating,
+          'comment': comment,
+        }),
+      );
+
+      return _parseResponse(response);
+    } on SocketException {
+      throw Exception('Cannot reach backend. Check API_BASE_URL and backend server status.');
+    }
+  }
+
   Map<String, dynamic> _parseResponse(http.Response response) {
     final String trimmedBody = response.body.trim();
 

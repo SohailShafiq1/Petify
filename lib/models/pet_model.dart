@@ -64,6 +64,8 @@ class PetModel extends HiveObject {
   @HiveField(19)
   DateTime? deliveredAt;
 
+  List<Map<String, dynamic>>? reviews;
+
   PetModel({
     required this.id,
     required this.name,
@@ -85,6 +87,7 @@ class PetModel extends HiveObject {
     this.buyerId,
     this.deliveryStatus,
     this.deliveredAt,
+    this.reviews,
   }) : createdAt = createdAt ?? DateTime.now();
 
   Map<String, dynamic> toJson() {
@@ -108,6 +111,7 @@ class PetModel extends HiveObject {
       'buyerId': buyerId,
       'deliveryStatus': deliveryStatus,
       'deliveredAt': deliveredAt?.toIso8601String(),
+      'reviews': reviews,
     };
   }
 
@@ -133,6 +137,9 @@ class PetModel extends HiveObject {
       buyerId: json['buyerId'] as String?,
       deliveryStatus: json['deliveryStatus'] as String?,
       deliveredAt: json['deliveredAt'] != null ? DateTime.parse(json['deliveredAt'] as String) : null,
+      reviews: (json['reviews'] as List?)
+          ?.whereType<Map<String, dynamic>>()
+          .toList(),
     );
   }
 }

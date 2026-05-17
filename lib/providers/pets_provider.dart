@@ -346,6 +346,37 @@ class PetsProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> addReview({
+    required String token,
+    required String petId,
+    required int rating,
+    required String comment,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _petApiService.addReview(
+        token: token,
+        petId: petId,
+        rating: rating,
+        comment: comment,
+      );
+
+      await loadMyOrders(token);
+      await loadPets();
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<bool> deletePet({
     required String token,
     required String petId,

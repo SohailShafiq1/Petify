@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../models/pet_model.dart';
@@ -113,6 +114,8 @@ class _OwnerPetsScreenState extends State<OwnerPetsScreen> {
             else
               _buildStats(context),
             const SizedBox(height: 16),
+            _buildReviewsSection(context),
+            const SizedBox(height: 16),
             Text(
               'All Pets',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -201,6 +204,108 @@ class _OwnerPetsScreenState extends State<OwnerPetsScreen> {
         Expanded(child: _StatCard(title: 'Sold', value: '$soldCount')),
         const SizedBox(width: 12),
         Expanded(child: _StatCard(title: 'Available', value: '$availableCount')),
+      ],
+    );
+  }
+
+  Widget _buildReviewsSection(BuildContext context) {
+    final reviews = (_ownerSummary?['reviews'] as List?) ?? const [];
+    final reviewCount = _ownerSummary?['reviewCount'] ?? 0;
+    final averageRating = (_ownerSummary?['averageRating'] as num?)?.toDouble() ?? 0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Buyer Reviews',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            if (reviewCount > 0)
+              Text(
+                '${averageRating.toStringAsFixed(1)} / 5 • $reviewCount reviews',
+                style: TextStyle(
+                  color: Colors.grey.shade700,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (reviews.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'No reviews yet.',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+          )
+        else
+          ...reviews.take(3).map((review) {
+            final createdAt = review['createdAt'] != null
+                ? DateTime.tryParse(review['createdAt'].toString())
+                : null;
+            final rating = (review['rating'] as num?)?.toDouble() ?? 0;
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor: Colors.blue.shade100,
+                        child: Icon(Icons.person, color: Colors.blue.shade700, size: 18),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          review['buyerName']?.toString() ?? 'Buyer',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      Text(
+                        '${rating.toStringAsFixed(0)} ★',
+                        style: TextStyle(
+                          color: Colors.orange.shade700,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    review['comment']?.toString() ?? '',
+                    style: TextStyle(color: Colors.grey.shade800, height: 1.4),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${review['petName']?.toString() ?? 'Pet'}${createdAt != null ? ' • ${DateFormat('MMM dd, yyyy').format(createdAt)}' : ''}',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
       ],
     );
   }

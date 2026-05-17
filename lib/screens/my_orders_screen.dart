@@ -23,6 +23,117 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     return imagePath;
   }
 
+  Future<void> _showReviewDialog(BuildContext context, PetModel pet) async {
+    final token = context.read<AuthProvider>().authToken;
+    if (token == null || token.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to add a review.')),
+      );
+      return;
+    }
+
+    final commentController = TextEditingController();
+    double rating = 5;
+
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Review Seller'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'How was your experience buying ${pet.name} from ${pet.ownerName}?',
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Rating: ${rating.toStringAsFixed(0)} / 5',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Slider(
+                      value: rating,
+                      min: 1,
+                      max: 5,
+                      divisions: 4,
+                      label: rating.toStringAsFixed(0),
+                      onChanged: (value) {
+                        setState(() {
+                          rating = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: commentController,
+                      maxLines: 4,
+                      decoration: const InputDecoration(
+                        labelText: 'Write your review',
+                        hintText: 'Share your experience...',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (commentController.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(dialogContext).showSnackBar(
+                        const SnackBar(content: Text('Please write a comment.')),
+                      );
+                      return;
+                    }
+                    Navigator.pop(dialogContext, true);
+                  },
+                  child: const Text('Submit'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (submitted != true || !context.mounted) return;
+
+    final success = await context.read<PetsProvider>().addReview(
+          token: token,
+          petId: pet.id,
+          rating: rating.round(),
+          comment: commentController.text.trim(),
+        );
+
+    if (!context.mounted) return;
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Review submitted successfully.')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.read<PetsProvider>().errorMessage ?? 'Review failed.')),
+      );
+    }
+  }
+
+  bool _hasReviewed(PetModel pet, String? currentUserId) {
+    if (currentUserId == null || currentUserId.isEmpty) {
+      return false;
+    }
+
+    final reviews = pet.reviews ?? const [];
+    return reviews.any((review) => review['buyerId']?.toString() == currentUserId);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -97,6 +208,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
   }
 
   Widget _buildOrderCard(PetModel pet) {
+    final currentUserId = context.read<AuthProvider>().currentUser?.id;
+    final alreadyReviewed = _hasReviewed(pet, currentUserId);
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       child: InkWell(
@@ -198,7 +312,44 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                             ),
                           ),
                         ),
+                        const SizedBox(width: 8),
+                        if (alreadyReviewed)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'REVIEWED',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue.shade700,
+                              ),
+                            ),
+                          ),
                       ],
+                    ),
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: alreadyReviewed
+                          ? Text(
+                              'You already reviewed this order',
+                              style: TextStyle(
+                                color: Colors.blue.shade700,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            )
+                          : OutlinedButton.icon(
+                              onPressed: () => _showReviewDialog(context, pet),
+                              icon: const Icon(Icons.rate_review_outlined, size: 18),
+                              label: const Text('Write Review'),
+                            ),
                     ),
                   ],
                 ),
