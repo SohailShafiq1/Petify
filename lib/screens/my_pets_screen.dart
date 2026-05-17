@@ -372,12 +372,38 @@ class _MyPetsScreenState extends State<MyPetsScreen> with SingleTickerProviderSt
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              setState(() {
-                pet.isAvailable = false;
+              final authProvider = context.read<AuthProvider>();
+              final token = authProvider.authToken;
+
+              if (token == null || token.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please log in again to update this pet.')),
+                );
+                return;
+              }
+
+              context.read<PetsProvider>().updatePetAvailability(
+                token: token,
+                pet: pet,
+                isAvailable: false,
+              ).then((success) {
+                if (!mounted) return;
+
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('${pet.name} marked as sold')),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        context.read<PetsProvider>().errorMessage ?? 'Failed to mark pet as sold',
+                      ),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('${pet.name} marked as sold')),
-              );
             },
             child: const Text('Mark as Sold'),
           ),

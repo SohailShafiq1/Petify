@@ -1,13 +1,15 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+
+import '../input_formatters/pakistan_mobile_suffix_formatter.dart';
 import '../models/pet_model.dart';
 import '../providers/auth_provider.dart';
 import '../providers/pets_provider.dart';
-import '../input_formatters/pakistan_mobile_suffix_formatter.dart';
 
 class PetDetailsScreen extends StatelessWidget {
   final String petId;
@@ -28,8 +30,6 @@ class PetDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // In a real app, we'd get this from the provider
-    // For now, we'll pass it through the extra parameter
     final pet = GoRouterState.of(context).extra as PetModel?;
 
     if (pet == null) {
@@ -52,7 +52,6 @@ class PetDetailsScreen extends StatelessWidget {
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          // App Bar with Image
           SliverAppBar(
             expandedHeight: 300,
             pinned: true,
@@ -128,15 +127,12 @@ class PetDetailsScreen extends StatelessWidget {
                     ),
             ),
           ),
-
-          // Content
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Pet Name and Price
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,10 +140,7 @@ class PetDetailsScreen extends StatelessWidget {
                       Expanded(
                         child: Text(
                           pet.name,
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineMedium
-                              ?.copyWith(
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
                         ),
@@ -161,8 +154,8 @@ class PetDetailsScreen extends StatelessWidget {
                           color: Colors.blue.shade700,
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: Text(
-                          '\$${pet.price.toStringAsFixed(0)}',
+                          child: Text(
+                            '\$${pet.price.toStringAsFixed(0)}',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 20,
@@ -172,9 +165,28 @@ class PetDetailsScreen extends StatelessWidget {
                       ),
                     ],
                   ),
+                  if (!pet.isAvailable) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.red.shade200),
+                      ),
+                      child: Text(
+                        'Sold',
+                        style: TextStyle(
+                          color: Colors.red.shade700,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
-
-                  // Info Cards
                   Row(
                     children: [
                       Expanded(
@@ -195,8 +207,6 @@ class PetDetailsScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 24),
-
-                  // Description
                   Text(
                     'Description',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -212,8 +222,6 @@ class PetDetailsScreen extends StatelessWidget {
                         ),
                   ),
                   const SizedBox(height: 24),
-
-                  // Owner Details
                   Text(
                     'Owner Details',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -254,8 +262,6 @@ class PetDetailsScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  // Posted Date
                   Text(
                     'Posted ${DateFormat('MMM dd, yyyy').format(pet.createdAt)}',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -385,9 +391,29 @@ class PetDetailsScreen extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: (!pet.isAvailable || isOwner || petsProvider.isLoading)
+                  onPressed: isOwner || petsProvider.isLoading
                       ? null
                       : () async {
+                          if (!pet.isAvailable) {
+                            if (!context.mounted) return;
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Pet is already sold'),
+                                content: const Text(
+                                  'This pet has already been sold and cannot be purchased again.',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('OK'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            return;
+                          }
+
                           final token = authProvider.authToken;
                           if (token == null || token.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -436,26 +462,20 @@ class PetDetailsScreen extends StatelessWidget {
                                           decoration: InputDecoration(
                                             labelText: 'Contact number',
                                             hintText: '40-8432739',
-                                            helperText:
-                                                'Used Pakistan locak format',
+                                            helperText: 'Used Pakistan local format',
                                             prefixIcon: const Icon(Icons.phone_outlined),
                                             prefixText: '03 ',
-                                            prefixStyle:
-                                                Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                                      fontWeight: FontWeight.w600,
-                                                    ),
+                                            prefixStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
                                             isDense: true,
                                           ),
                                           validator: (value) {
                                             if (value == null || value.trim().isEmpty) {
                                               return 'Contact number is required';
                                             }
-                                            final digits =
-                                                PakistanMobileSuffixFormatter
-                                                    .normalizeSuffixDigits(value);
-                                            if (digits.length !=
-                                                PakistanMobileSuffixFormatter
-                                                    .maxDigitsAfterPrefix) {
+                                            final digits = PakistanMobileSuffixFormatter.normalizeSuffixDigits(value);
+                                            if (digits.length != PakistanMobileSuffixFormatter.maxDigitsAfterPrefix) {
                                               return 'Enter complete number (9 digits after 03)';
                                             }
                                             return null;
@@ -509,8 +529,7 @@ class PetDetailsScreen extends StatelessWidget {
                             token: token,
                             petId: pet.id,
                             buyerName: nameController.text.trim(),
-                            buyerContact:
-                                PakistanMobileSuffixFormatter.toFullPakNumber(
+                            buyerContact: PakistanMobileSuffixFormatter.toFullPakNumber(
                               contactController.text,
                             ),
                             buyerAddress: addressController.text.trim(),
@@ -530,14 +549,14 @@ class PetDetailsScreen extends StatelessWidget {
                           }
                         },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade700,
+                    backgroundColor: pet.isAvailable ? Colors.blue.shade700 : Colors.red.shade600,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  icon: const Icon(Icons.shopping_bag_outlined),
+                  icon: Icon(pet.isAvailable ? Icons.shopping_bag_outlined : Icons.block),
                   label: Text(
                     pet.isAvailable
                         ? (isOwner ? 'Your Listing' : 'Buy This Pet')
@@ -588,10 +607,10 @@ class _InfoCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             value,
+            textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),

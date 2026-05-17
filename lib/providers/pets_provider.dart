@@ -195,6 +195,37 @@ class PetsProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> updatePetAvailability({
+    required String token,
+    required PetModel pet,
+    required bool isAvailable,
+  }) async {
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _petApiService.updatePet(
+        token: token,
+        petId: pet.id,
+        name: pet.name,
+        category: pet.category,
+        age: pet.age,
+        description: pet.description,
+        price: pet.price,
+        ownerContact: pet.ownerContact,
+        isAvailable: isAvailable,
+      );
+
+      await loadMyPets(token);
+      await loadPets();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
   void clearSearch() {
     _searchResults = [];
     _isSearching = false;
