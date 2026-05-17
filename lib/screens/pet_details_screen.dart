@@ -10,6 +10,7 @@ import '../input_formatters/pakistan_mobile_suffix_formatter.dart';
 import '../models/pet_model.dart';
 import '../providers/auth_provider.dart';
 import '../providers/pets_provider.dart';
+import '../services/pet_api_service.dart';
 
 class PetDetailsScreen extends StatelessWidget {
   final String petId;
@@ -187,21 +188,32 @@ class PetDetailsScreen extends StatelessWidget {
                     ),
                   ],
                   const SizedBox(height: 16),
-                  Row(
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
                     children: [
-                      Expanded(
+                      SizedBox(
+                        width: (MediaQuery.of(context).size.width - 44) / 2,
                         child: _InfoCard(
                           icon: Icons.category,
                           label: 'Category',
                           value: pet.category,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
+                      SizedBox(
+                        width: (MediaQuery.of(context).size.width - 44) / 2,
                         child: _InfoCard(
                           icon: Icons.cake,
                           label: 'Age',
                           value: '${pet.age} months',
+                        ),
+                      ),
+                      SizedBox(
+                        width: (MediaQuery.of(context).size.width - 44) / 2,
+                        child: _InfoCard(
+                          icon: Icons.pets,
+                          label: 'Breed',
+                          value: pet.breed?.trim().isNotEmpty == true ? pet.breed! : 'Unknown',
                         ),
                       ),
                     ],
@@ -222,11 +234,30 @@ class PetDetailsScreen extends StatelessWidget {
                         ),
                   ),
                   const SizedBox(height: 24),
-                  Text(
-                    'Owner Details',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Owner Details',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                         ),
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          context.push(
+                            '/owner/${pet.ownerId}?name=${Uri.encodeComponent(pet.ownerName)}&contact=${Uri.encodeComponent(pet.ownerContact)}',
+                          );
+                        },
+                        icon: Icon(
+                          Icons.account_circle,
+                          color: Colors.blue.shade700,
+                          size: 30,
+                        ),
+                        tooltip: 'View owner profile',
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   Container(
@@ -573,6 +604,7 @@ class PetDetailsScreen extends StatelessWidget {
       ),
     );
   }
+
 }
 
 class _InfoCard extends StatelessWidget {

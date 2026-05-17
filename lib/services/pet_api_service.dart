@@ -185,6 +185,19 @@ class PetApiService {
     }
   }
 
+  Future<Map<String, dynamic>> getOwnerSummary(String ownerId) async {
+    try {
+      final response = await http.get(
+        _uri('/api/pets/owner/$ownerId/summary'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      return _parseResponse(response);
+    } on SocketException {
+      throw Exception('Cannot reach backend. Check API_BASE_URL and backend server status.');
+    }
+  }
+
   Future<Map<String, dynamic>> searchPets(String query) async {
     try {
       final response = await http.get(
@@ -315,6 +328,21 @@ class PetApiService {
   }
 
   Map<String, dynamic> _parseResponse(http.Response response) {
+    final String trimmedBody = response.body.trim();
+
+    // If the server returned HTML (e.g., an index.html page), surface a clearer error
+    if (trimmedBody.startsWith('<')) {
+      // Log for debug
+      assert(() {
+        // ignore: avoid_print
+        print('API returned HTML instead of JSON: ${response.statusCode}');
+        print(trimmedBody.substring(0, trimmedBody.length > 400 ? 400 : trimmedBody.length));
+        return true;
+      }());
+
+      throw Exception('Received HTML from server (check API_BASE_URL and that the backend is running).');
+    }
+
     final Map<String, dynamic> body = response.body.isEmpty
         ? <String, dynamic>{}
         : jsonDecode(response.body) as Map<String, dynamic>;
@@ -335,6 +363,18 @@ class PetApiService {
   }
 
   Map<String, dynamic> _parseMultipartResponse(int statusCode, String body) {
+    final String trimmed = body.trim();
+
+    if (trimmed.startsWith('<')) {
+      assert(() {
+        // ignore: avoid_print
+        print('Multipart API returned HTML instead of JSON: statusCode=$statusCode body=${trimmed.substring(0, trimmed.length > 400 ? 400 : trimmed.length)}');
+        return true;
+      }());
+
+      throw Exception('Received HTML from server (check API_BASE_URL and that the backend is running).');
+    }
+
     final Map<String, dynamic> parsedBody = body.isEmpty
         ? <String, dynamic>{}
         : jsonDecode(body) as Map<String, dynamic>;

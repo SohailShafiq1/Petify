@@ -19,6 +19,7 @@ import 'screens/my_orders_screen.dart';
 import 'screens/my_sales_screen.dart';
 import 'screens/chats_screen.dart';
 import 'screens/favorites_screen.dart';
+import 'screens/owner_pets_screen.dart';
 
 class AppRouter {
   final AuthProvider authProvider;
@@ -132,6 +133,19 @@ class AppRouter {
       GoRoute(
         path: '/favorites',
         builder: (context, state) => const FavoritesScreen(),
+      ),
+      GoRoute(
+        path: '/owner/:ownerId',
+        builder: (context, state) {
+          final ownerId = state.pathParameters['ownerId']!;
+          final ownerName = state.uri.queryParameters['name'];
+          final ownerContact = state.uri.queryParameters['contact'];
+          return OwnerPetsScreen(
+            ownerId: ownerId,
+            ownerName: ownerName,
+            ownerContact: ownerContact,
+          );
+        },
       ),
       GoRoute(
         path: '/my-orders',
