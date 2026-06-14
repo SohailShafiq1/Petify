@@ -235,7 +235,7 @@ class PetCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Text(
-                          '\$${pet.price.toStringAsFixed(0)}',
+                          'Rs ${pet.price.toStringAsFixed(0)}',
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -278,6 +278,27 @@ class PetCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 8),
+                  if (pet.city != null && pet.city!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.location_on,
+                            size: 16,
+                            color: Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            pet.city!,
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   Text(
                     pet.description,
                     maxLines: 2,

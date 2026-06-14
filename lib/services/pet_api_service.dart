@@ -39,6 +39,7 @@ class PetApiService {
     required String description,
     required double price,
     required String ownerContact,
+    required String city,
     String? imagePath,
   }) async {
     try {
@@ -58,6 +59,7 @@ class PetApiService {
       request.fields['description'] = description;
       request.fields['price'] = price.toString();
       request.fields['ownerContact'] = ownerContact;
+      request.fields['city'] = city;
 
       if (imagePath != null && imagePath.isNotEmpty) {
         final mimeType = _getMimeType(imagePath);
@@ -344,6 +346,42 @@ class PetApiService {
           'rating': rating,
           'comment': comment,
         }),
+      );
+
+      return _parseResponse(response);
+    } on SocketException {
+      throw Exception('Cannot reach backend. Check API_BASE_URL and backend server status.');
+    }
+  }
+
+  Future<Map<String, dynamic>> getComments({
+    required String petId,
+  }) async {
+    try {
+      final response = await http.get(
+        _uri('/api/pets/$petId/comments'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      return _parseResponse(response);
+    } on SocketException {
+      throw Exception('Cannot reach backend. Check API_BASE_URL and backend server status.');
+    }
+  }
+
+  Future<Map<String, dynamic>> addComment({
+    required String token,
+    required String petId,
+    required String comment,
+  }) async {
+    try {
+      final response = await http.post(
+        _uri('/api/pets/$petId/comments'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'comment': comment}),
       );
 
       return _parseResponse(response);

@@ -31,6 +31,9 @@ class PetModel extends HiveObject {
   @HiveField(8)
   String ownerContact;
 
+  @HiveField(20)
+  String? city;
+
   @HiveField(9)
   String? imagePath;
 
@@ -76,6 +79,7 @@ class PetModel extends HiveObject {
     required this.price,
     required this.ownerName,
     required this.ownerContact,
+    this.city,
     required this.ownerId,
     this.imagePath,
     DateTime? createdAt,
@@ -100,6 +104,7 @@ class PetModel extends HiveObject {
       'price': price,
       'ownerName': ownerName,
       'ownerContact': ownerContact,
+      'city': city,
       'ownerId': ownerId,
       'imagePath': imagePath,
       'createdAt': createdAt.toIso8601String(),
@@ -126,6 +131,7 @@ class PetModel extends HiveObject {
       price: (json['price'] as num).toDouble(),
       ownerName: json['ownerName'] as String,
       ownerContact: json['ownerContact'] as String,
+      city: json['city'] as String?,
       ownerId: json['ownerId'] as String,
       imagePath: json['imageUrl'] as String?,
       createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : null,

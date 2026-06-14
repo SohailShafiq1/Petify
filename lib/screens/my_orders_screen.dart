@@ -273,13 +273,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Icon(
-                          Icons.attach_money,
-                          size: 14,
-                          color: Colors.grey.shade600,
-                        ),
                         Text(
-                          pet.price.toStringAsFixed(0),
+                          'Rs ${pet.price.toStringAsFixed(0)}',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade600,

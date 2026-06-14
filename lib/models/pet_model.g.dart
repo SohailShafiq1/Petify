@@ -25,6 +25,7 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
       price: fields[5] as double,
       ownerName: fields[6] as String,
       ownerContact: fields[7] as String,
+      city: fields[20] as String?,
       ownerId: fields[9] as String,
       imagePath: fields[8] as String?,
       createdAt: fields[10] as DateTime?,
@@ -42,7 +43,7 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
   @override
   void write(BinaryWriter writer, PetModel obj) {
     writer
-      ..writeByte(19)
+      ..writeByte(20)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -59,6 +60,8 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
       ..write(obj.ownerName)
       ..writeByte(7)
       ..write(obj.ownerContact)
+      ..writeByte(20)
+      ..write(obj.city)
       ..writeByte(8)
       ..write(obj.imagePath)
       ..writeByte(9)

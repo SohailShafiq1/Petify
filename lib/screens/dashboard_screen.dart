@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../providers/auth_provider.dart';
 import '../providers/pets_provider.dart';
+import '../models/pet_model.dart';
 import '../models/category_model.dart';
 import '../widgets/pet_card.dart';
 import '../widgets/category_card.dart';
@@ -25,6 +26,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _searchQuery = '';
   Timer? _searchDebounce;
   bool _isAnalyzing = false;
+  bool _showFilters = false;
+
+  String? _selectedFilterCity;
+  int? _minAge;
+  int? _maxAge;
+  double? _minPrice;
+  double? _maxPrice;
+
+  List<String> _availableFilterCities(List<PetModel> pets) {
+    final cities = pets
+        .map((pet) => (pet.city ?? '').trim())
+        .where((city) => city.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return cities;
+  }
+
+  bool get _hasActiveFilters =>
+      _selectedFilterCity != null ||
+      _minAge != null ||
+      _maxAge != null ||
+      _minPrice != null ||
+      _maxPrice != null;
+
+  String _emptyStateMessage() {
+    if (_searchQuery.isNotEmpty) {
+      return 'No pets found';
+    }
+
+    if (_selectedFilterCity != null && _selectedFilterCity!.isNotEmpty) {
+      return 'No pets found in $_selectedFilterCity';
+    }
+
+    if (_hasActiveFilters) {
+      return 'No pets match these filters';
+    }
+
+    return 'No pets available';
+  }
 
   @override
   void initState() {
@@ -321,10 +362,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final user = context.watch<AuthProvider>().currentUser;
     final petsProvider = context.watch<PetsProvider>();
     final categories = CategoryModel.getDummyCategories();
+    final currentUserId = user?.id;
 
-    final filteredPets = _searchQuery.isEmpty
-      ? petsProvider.topSellingPets
+    final basePets = _searchQuery.isEmpty
+      ? petsProvider.allPets
       : petsProvider.searchResults;
+
+    final availableFilterCities = _availableFilterCities(petsProvider.allPets);
+
+    final filteredPets = basePets.where((pet) {
+      // Exclude current user's pets
+      if (pet.ownerId == currentUserId) return false;
+      
+      // City filter
+      if (_selectedFilterCity != null && _selectedFilterCity!.isNotEmpty) {
+        final petCity = (pet.city ?? '').trim().toLowerCase();
+        final filterCity = _selectedFilterCity!.trim().toLowerCase();
+        if (petCity.isEmpty || petCity != filterCity) {
+          return false;
+        }
+      }
+      
+      // Age filter
+      if (_minAge != null && pet.age < _minAge!) return false;
+      if (_maxAge != null && pet.age > _maxAge!) return false;
+      
+      // Price filter
+      if (_minPrice != null && pet.price < _minPrice!) return false;
+      if (_maxPrice != null && pet.price > _maxPrice!) return false;
+      
+      return true;
+    }).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -639,6 +707,305 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
 
+              // Filter Toggle
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.blue.shade600, Colors.blue.shade400],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.blue.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          _showFilters = !_showFilters;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.tune,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Filters',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
+                              ],
+                            ),
+                            Icon(
+                              _showFilters ? Icons.expand_less : Icons.expand_more,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // Filter Panel (Expandable)
+              if (_showFilters)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                  child: Card(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // City Filter
+                          Text(
+                            'Location',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Colors.blue.shade700,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
+                                ),
+                          ),
+                          const SizedBox(height: 8),
+                          if (availableFilterCities.isEmpty)
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.blue.shade200),
+                              ),
+                              child: Text(
+                                'No pet locations available yet',
+                                style: TextStyle(color: Colors.grey.shade700),
+                              ),
+                            )
+                          else
+                          DropdownButtonFormField<String>(
+                            value: availableFilterCities.contains(_selectedFilterCity)
+                                ? _selectedFilterCity
+                                : null,
+                            items: [
+                              ...availableFilterCities.map(
+                                (city) => DropdownMenuItem(
+                                  value: city,
+                                  child: Text(city),
+                                ),
+                              )
+                            ],
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedFilterCity = (value == null || value.isEmpty) ? null : value;
+                              });
+                            },
+                            decoration: InputDecoration(
+                              prefixIcon: Icon(Icons.location_on, color: Colors.blue.shade700),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: Colors.blue.shade200),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: Colors.blue.shade200),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: Colors.blue.shade700, width: 2),
+                              ),
+                              filled: true,
+                              fillColor: Colors.blue.shade50,
+                            ),
+                            hint: const Text('All cities'),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Age Range Filter
+                          Text(
+                            'Age (months)',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Colors.blue.shade700,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
+                                ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _minAge = int.tryParse(value);
+                                    });
+                                  },
+                                  decoration: InputDecoration(
+                                    hintText: 'Min',
+                                    prefixIcon: Icon(Icons.arrow_downward, color: Colors.blue.shade700, size: 18),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide(color: Colors.blue.shade200),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide(color: Colors.blue.shade200),
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.blue.shade50,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: TextField(
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _maxAge = int.tryParse(value);
+                                    });
+                                  },
+                                  decoration: InputDecoration(
+                                    hintText: 'Max',
+                                    prefixIcon: Icon(Icons.arrow_upward, color: Colors.blue.shade700, size: 18),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide(color: Colors.blue.shade200),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide(color: Colors.blue.shade200),
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.blue.shade50,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Price Range Filter
+                          Text(
+                            'Price (\$)',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Colors.blue.shade700,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
+                                ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _minPrice = double.tryParse(value);
+                                    });
+                                  },
+                                  decoration: InputDecoration(
+                                    hintText: 'Min',
+                                    prefixIcon: Icon(Icons.attach_money, color: Colors.blue.shade700, size: 18),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide(color: Colors.blue.shade200),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide(color: Colors.blue.shade200),
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.blue.shade50,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: TextField(
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _maxPrice = double.tryParse(value);
+                                    });
+                                  },
+                                  decoration: InputDecoration(
+                                    hintText: 'Max',
+                                    prefixIcon: Icon(Icons.payments, color: Colors.blue.shade700, size: 18),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide(color: Colors.blue.shade200),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide(color: Colors.blue.shade200),
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.blue.shade50,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Clear Button
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                setState(() {
+                                  _selectedFilterCity = null;
+                                  _minAge = null;
+                                  _maxAge = null;
+                                  _minPrice = null;
+                                  _maxPrice = null;
+                                });
+                              },
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Reset Filters'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.blue.shade700,
+                                side: BorderSide(color: Colors.blue.shade700),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
               // Top Selling Pets section
               Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -670,9 +1037,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       ),
                                       const SizedBox(height: 16),
                                       Text(
-                                        _searchQuery.isEmpty
-                                            ? 'No pets available'
-                                            : 'No pets found',
+                                        _emptyStateMessage(),
                                         style: TextStyle(
                                           fontSize: 16,
                                           color: Colors.grey.shade600,

@@ -31,6 +31,10 @@ class PetsProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
+  final Map<String, List<Map<String, dynamic>>> _commentsCache = {};
+
+  List<Map<String, dynamic>> getCommentsCache(String petId) => _commentsCache[petId] ?? [];
+
   bool isFavorite(String petId) => _favoriteIds.contains(petId);
 
   List<PetModel> get topSellingPets {
@@ -254,6 +258,7 @@ class PetsProvider extends ChangeNotifier {
     required String description,
     required double price,
     required String ownerContact,
+    required String city,
     String? imagePath,
   }) async {
     _isLoading = true;
@@ -270,6 +275,7 @@ class PetsProvider extends ChangeNotifier {
         description: description,
         price: price,
         ownerContact: ownerContact,
+        city: city,
         imagePath: imagePath,
       );
 
@@ -372,6 +378,49 @@ class PetsProvider extends ChangeNotifier {
     } catch (e) {
       _errorMessage = e.toString().replaceFirst('Exception: ', '');
       _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchComments(String petId) async {
+    try {
+      final response = await _petApiService.getComments(petId: petId);
+      final comments = (response['comments'] as List?) ?? [];
+      final parsed = comments.map((c) => c as Map<String, dynamic>).toList();
+      _commentsCache[petId] = parsed;
+      notifyListeners();
+      return parsed;
+    } catch (e) {
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+      return [];
+    }
+  }
+
+  Future<bool> postComment({
+    required String token,
+    required String petId,
+    required String comment,
+  }) async {
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _petApiService.addComment(
+        token: token,
+        petId: petId,
+        comment: comment,
+      );
+
+      final newComment = (response['comment'] as Map<String, dynamic>?) ?? {};
+      final existing = _commentsCache[petId] ?? [];
+      existing.insert(0, newComment);
+      _commentsCache[petId] = existing;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
       notifyListeners();
       return false;
     }

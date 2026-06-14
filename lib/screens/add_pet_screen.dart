@@ -7,6 +7,8 @@ import '../models/category_model.dart';
 import '../providers/auth_provider.dart';
 import '../providers/pets_provider.dart';
 import '../input_formatters/pakistan_mobile_suffix_formatter.dart';
+import '../utils/pakistan_cities.dart';
+import '../services/notification_service.dart';
 
 class AddPetScreen extends StatefulWidget {
   const AddPetScreen({super.key});
@@ -25,10 +27,12 @@ class _AddPetScreenState extends State<AddPetScreen> {
   final _ownerContactController = TextEditingController();
 
   String? _selectedCategory;
+  String? _selectedCity;
   String? _imagePath;
   final ImagePicker _picker = ImagePicker();
 
   final categories = CategoryModel.getDummyCategories();
+  final cities = PakistanCities.cities;
   static const Map<String, List<String>> _breedSuggestions = {
     'Dogs': [
       'German Shepherd',
@@ -160,6 +164,13 @@ class _AddPetScreenState extends State<AddPetScreen> {
       return;
     }
 
+    if (_selectedCity == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a city')),
+      );
+      return;
+    }
+
     final authProvider = context.read<AuthProvider>();
     final petsProvider = context.read<PetsProvider>();
     final token = authProvider.authToken;
@@ -182,12 +193,17 @@ class _AddPetScreenState extends State<AddPetScreen> {
       ownerContact: PakistanMobileSuffixFormatter.toFullPakNumber(
         _ownerContactController.text,
       ),
+      city: _selectedCity!,
       imagePath: _imagePath,
     );
 
     if (!mounted) return;
 
     if (success) {
+      await NotificationService.instance.showPetUploaded(
+        petName: _nameController.text.trim(),
+        city: _selectedCity,
+      );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Pet added successfully!'),
@@ -398,24 +414,59 @@ class _AddPetScreenState extends State<AddPetScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Price
+              // Price (PKR)
               TextFormField(
                 controller: _priceController,
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                  labelText: 'Price (\$)',
-                  hintText: 'Enter price',
-                  prefixIcon: const Icon(Icons.attach_money),
+                  labelText: 'Price (PKR)',
+                  hintText: 'Enter price in PKR',
+                  prefixText: 'Rs ',
+                  prefixStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter price';
+                    return 'Please enter price in PKR';
                   }
                   if (double.tryParse(value) == null) {
                     return 'Please enter a valid number';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // City
+              DropdownButtonFormField<String>(
+                value: _selectedCity,
+                items: cities
+                    .map(
+                      (city) => DropdownMenuItem(
+                        value: city,
+                        child: Text(city),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedCity = value;
+                  });
+                },
+                decoration: InputDecoration(
+                  labelText: 'City',
+                  prefixIcon: const Icon(Icons.location_city),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please select a city';
                   }
                   return null;
                 },

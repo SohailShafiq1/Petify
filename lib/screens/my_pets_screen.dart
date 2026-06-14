@@ -236,13 +236,8 @@ class _MyPetsScreenState extends State<MyPetsScreen> with SingleTickerProviderSt
                           ),
                         ),
                         const SizedBox(width: 16),
-                        Icon(
-                          Icons.attach_money,
-                          size: 14,
-                          color: Colors.grey.shade600,
-                        ),
                         Text(
-                          pet.price.toStringAsFixed(0),
+                          'Rs ${pet.price.toStringAsFixed(0)}',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade600,

@@ -12,13 +12,69 @@ import '../providers/auth_provider.dart';
 import '../providers/pets_provider.dart';
 import '../services/pet_api_service.dart';
 
-class PetDetailsScreen extends StatelessWidget {
+class PetDetailsScreen extends StatefulWidget {
   final String petId;
 
   const PetDetailsScreen({
     super.key,
     required this.petId,
   });
+
+  @override
+  State<PetDetailsScreen> createState() => _PetDetailsScreenState();
+}
+
+class _PetDetailsScreenState extends State<PetDetailsScreen> {
+  final TextEditingController _commentController = TextEditingController();
+  bool _loadingComments = false;
+  bool _postingComment = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadComments());
+  }
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadComments() async {
+    setState(() => _loadingComments = true);
+    final petsProvider = context.read<PetsProvider>();
+    await petsProvider.fetchComments(widget.petId);
+    if (mounted) setState(() => _loadingComments = false);
+  }
+
+  Future<void> _submitComment() async {
+    final text = _commentController.text.trim();
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a comment')));
+      return;
+    }
+
+    final authProvider = context.read<AuthProvider>();
+    final token = authProvider.authToken;
+    if (token == null || token.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please login to comment')));
+      return;
+    }
+
+    final petsProvider = context.read<PetsProvider>();
+    setState(() => _postingComment = true);
+    final success = await petsProvider.postComment(token: token, petId: widget.petId, comment: text);
+    setState(() => _postingComment = false);
+    if (success) {
+      _commentController.clear();
+      // Refresh comments briefly to ensure consistency
+      await petsProvider.fetchComments(widget.petId);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Comment posted')));
+    } else {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(petsProvider.errorMessage ?? 'Failed to post comment')));
+    }
+  }
 
   String _getImageUrl(String imagePath) {
     if (imagePath.startsWith('/')) {
@@ -156,7 +212,7 @@ class PetDetailsScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(20),
                         ),
                           child: Text(
-                            '\$${pet.price.toStringAsFixed(0)}',
+                            'Rs ${pet.price.toStringAsFixed(0)}',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 20,
@@ -375,6 +431,131 @@ class PetDetailsScreen extends StatelessWidget {
                         ],
                       ),
                     ),
+                  const SizedBox(height: 16),
+
+                  // Comments section (input fixed at top, comments scroll below)
+                  Text(
+                    'Comments',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Column(
+                      children: [
+                        // Input stays on top
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _commentController,
+                                decoration: InputDecoration(
+                                  hintText: 'Write a comment...',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                ),
+                                minLines: 1,
+                                maxLines: 4,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            SizedBox(
+                              height: 40,
+                              child: ElevatedButton(
+                                onPressed: _postingComment ? null : _submitComment,
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: _postingComment
+                                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                    : const Text('Post'),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Scrollable comments list below the input
+                        SizedBox(
+                          height: 220,
+                          child: _loadingComments
+                              ? const Center(child: CircularProgressIndicator())
+                              : Builder(builder: (context) {
+                                  final comments = petsProvider.getCommentsCache(widget.petId);
+                                  if (comments.isEmpty) {
+                                    return Center(
+                                      child: Text(
+                                        'No comments yet. Be the first to comment!',
+                                        style: TextStyle(color: Colors.grey.shade600),
+                                      ),
+                                    );
+                                  }
+
+                                  return ListView.separated(
+                                    physics: const BouncingScrollPhysics(),
+                                    itemCount: comments.length,
+                                    separatorBuilder: (_, __) => const Divider(height: 8),
+                                    itemBuilder: (context, index) {
+                                      final c = comments[index];
+                                      final created = c['createdAt'] != null ? DateTime.parse(c['createdAt'].toString()) : null;
+                                      return Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          CircleAvatar(
+                                            radius: 18,
+                                            backgroundColor: Colors.blue.shade100,
+                                            child: Text(
+                                              (c['commenterName'] ?? 'U').toString().split(' ').map((s) => s.isNotEmpty ? s[0] : '').take(2).join(),
+                                              style: TextStyle(color: Colors.blue.shade700, fontWeight: FontWeight.bold),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Row(
+                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                  children: [
+                                                    Text(
+                                                      c['commenterName'] ?? 'User',
+                                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                                    ),
+                                                    Text(
+                                                      created != null ? DateFormat('MMM d, h:mm a').format(created) : '',
+                                                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                                    ),
+                                                  ],
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  c['comment'] ?? '',
+                                                  style: const TextStyle(fontSize: 14),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                }),
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 100),
                 ],
               ),

@@ -6,9 +6,11 @@ import 'services/local_storage_service.dart';
 import 'providers/auth_provider.dart';
 import 'providers/pets_provider.dart';
 import 'providers/chat_provider.dart';
+import 'providers/notification_provider.dart';
 import 'providers/profile_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/orders_provider.dart';
+import 'services/notification_service.dart';
 import 'router.dart';
 
 void main() async {
@@ -23,6 +25,7 @@ void main() async {
   // Initialize local storage
   final storageService = LocalStorageService();
   await storageService.init();
+  await NotificationService.instance.init();
 
   runApp(PetifyApp(storageService: storageService));
 }
@@ -59,6 +62,11 @@ class _PetifyAppState extends State<PetifyApp> {
           create: (context) => ChatProvider(context.read<AuthProvider>()),
           update: (context, authProvider, chatProvider) =>
               chatProvider!..updateAuth(authProvider),
+        ),
+        ChangeNotifierProxyProvider<AuthProvider, NotificationProvider>(
+          create: (context) => NotificationProvider(context.read<AuthProvider>()),
+          update: (context, authProvider, notificationProvider) =>
+              notificationProvider!..syncAuth(authProvider),
         ),
         ChangeNotifierProvider(
           create: (_) => ProfileProvider(widget.storageService),
